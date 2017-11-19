@@ -22,7 +22,7 @@ Install [Yarn]:
 
     $ brew install yarn
 
-Install [Python 3]:
+Install [Python 3][python]:
 
     $ brew install python3
 
@@ -60,6 +60,8 @@ Run in production mode (increases exponential backoff):
 Deployment happens automatically when a commit is merged to `master`.
 
 [api]: https://github.com/MuddCreates/hyperschedule-scraper
+[homebrew]: https://brew.sh/
 [new-api]: https://github.com/MuddCreates/hyperschedule-api
 [python]: https://www.python.org/
 [webapp]: https://github.com/MuddCreates/hyperschedule
+[yarn]: https://yarnpkg.com/en/
