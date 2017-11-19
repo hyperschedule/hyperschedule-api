@@ -1,37 +1,65 @@
-**Hyperschedule**: the fast course scheduler.
+**Hyperschedule Scraper**: retrieving course data from the worst
+database ever.
 
-## Live demo
+## See also
 
-Check out https://hyperschedule.herokuapp.com!
+Hyperschedule has three services: the [front-end webapp][webapp], the
+[course catalog API][api], and the Portal scraper (this repository).
 
-## API
-
-We have one! Hit up
-
-    https://hyperschedule.herokuapp.com/api/v1/all-courses
-
-You'll find it more enjoyable than Portal.
-
-## Why?
-
-This scheduler takes a different approach to the various versions of
-**hmc-scheduler**, and this approach makes it much faster to amend
-your schedule on the fly during registration. Also, half-semester
-courses finally work :)
+Currently, the course catalog and the Portal scraper are still one
+service. They will be separated once the [new API][new-api] is up and
+running.
 
 ## Local development
+### Install dependencies
+#### macOS
+
+Install [Homebrew]:
+
+    $ /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+
+Install [Yarn]:
+
+    $ brew install yarn
+
+Install [Python 3]:
+
+    $ brew install python3
+
+### Set up project
+
+Install Node.js dependencies:
 
     $ yarn
-    $ pip3 install -r requirements.txt
-    $ ./server.js
 
-## Run in production mode
+Create a virtual environment:
 
-    $ yarn babel
-    $ ./server.js --production
+    $ python3 -m venv venv
 
-## Contributing
+Enter the virtual environment:
 
-This is essentially a hackathon project so coding standards are not
-high. I will merge pull requests readily. Or, you can open an issue
-for a bug or feature request.
+    $ source venv/bin/activate
+
+Install Python dependencies:
+
+    $ pip install -r requirements.txt
+
+### Run locally
+
+Run the scraper and serve the API on `localhost:3000` (use a different
+port by exporting `PORT`):
+
+    $ yarn server
+
+Run in production mode (increases exponential backoff):
+
+    $ yarn server --production
+
+### Deploy
+
+Deployment happens automatically when a commit is merged to `master`.
+
+[api]: https://github.com/MuddCreates/hyperschedule-scraper
+[new-api]: https://github.com/MuddCreates/hyperschedule-api
+[python]: https://www.python.org/
+[webapp]: https://github.com/MuddCreates/hyperschedule

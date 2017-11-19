@@ -4,8 +4,6 @@
   "main": "index.js",
   "license": "MIT",
   "dependencies": {
-    "babel-cli": "6.26.0",
-    "babel-preset-env": "1.6.1",
     "express": "4.16.2",
     "moment": "2.19.2",
     "mz": "2.7.0",
@@ -15,6 +13,6 @@
     "node": ">=8.8.1"
   },
   "scripts": {
-    "babel": "rm -rf static/production && babel static/src -d static/production --copy-files"
+    "server": "./server.js"
   }
 }

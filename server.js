@@ -9,6 +9,11 @@ const process = require('process');
 let courses = null;
 let production = false;
 
+function log(stream, message)
+{
+  stream('[' + moment().format('HH:mm:ss') + ']', message);
+}
+
 async function parseAndSlurpOnce()
 {
   let result;
@@ -18,8 +23,8 @@ async function parseAndSlurpOnce()
   }
   catch (err)
   {
-    console.error('Fetch script terminated unexpectedly');
-    console.error(err);
+    log(console.error, 'Fetch script terminated unexpectedly');
+    log(console.error, err);
     throw err;
   }
   const jsonString = await fs.readFile('courses.json');
@@ -37,7 +42,7 @@ async function parseAndSlurpRepeatedly()
     try
     {
       await parseAndSlurpOnce();
-      console.log('Fetch script completed successfully');
+      log(console.log, 'Fetch script completed successfully');
       delay = originalDelay;
     }
     catch (err)
@@ -49,9 +54,28 @@ async function parseAndSlurpRepeatedly()
   }
 }
 
+// https://stackoverflow.com/q/11001817/3538165
+function allowCrossDomain(req, res, next) {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Content-Length, X-Requested-With');
+
+  // intercept OPTIONS method
+  if ('OPTIONS' == req.method) {
+    res.send(200);
+  }
+  else {
+    next();
+  }
+};
+
 async function runWebserver()
 {
   const server = express();
+  server.use(allowCrossDomain);
+  server.get('/', (req, res, next) => {
+    res.redirect(301, 'https://hyperschedule.netlify.com');
+  });
   server.get('/api/v1/all-courses', (req, res, next) => {
     if (courses)
     {
@@ -68,17 +92,15 @@ async function runWebserver()
       res.status(500).send('Server could not fetch Portal data');
     }
   });
-  const staticDir = production ? 'static/production' : 'static/src';
-  server.use(express.static(staticDir));
   server.use((req, res, next) => {
     res.status(404).send('Not found');
   });
   server.use((err, req, res, next) => {
-    console.error('Internal server error');
-    console.error(err);
+    log(console.error, 'Internal server error');
+    log(console.error, err);
     res.status(500).send('Internal server error');
   });
-  const port = process.env.PORT || 5000;
+  const port = process.env.PORT || 3000;
   await new Promise((resolve, reject) => server.listen(port, err => {
     if (err)
     {
@@ -87,8 +109,8 @@ async function runWebserver()
     else
     {
       const mode = production ? 'production' : 'dev';
-      console.log(
-        `Hyperschedule webserver (${mode}) listening on port ${port}`);
+      log(console.log,
+          `Hyperschedule API (${mode}) listening on port ${port}`);
       resolve();
     }
   }));
@@ -115,7 +137,7 @@ function handleCommandLineArguments()
     }
     else
     {
-      console.error(`Unexpected argument '${arg}', ignoring`);
+      log(console.error, `Unexpected argument '${arg}', ignoring`);
     }
   }
 }
@@ -123,7 +145,7 @@ function handleCommandLineArguments()
 handleCommandLineArguments();
 start()
   .catch(err => {
-    console.error('Hyperschedule webserver terminated unexpectedly');
-    console.error(err);
+    log(console.error, 'Hyperschedule webserver terminated unexpectedly');
+    log(console.error, err);
     process.exit(1);
   });
