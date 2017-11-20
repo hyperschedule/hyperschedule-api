@@ -1,0 +1,129 @@
+,<!DOCTYPE html>
+<html>
+  <head>
+    <title>Hyperschedule has moved!</title>
+    <meta charset="utf8"/>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/css/bootstrap.min.css" integrity="sha384-PsH8R72JQ3SOdhVi3uxftmaW6Vc51MKb0q5P2rRUpPvrszuE4W1povHYgTpBfshb" crossorigin="anonymous"/>
+    <link href="https://fonts.googleapis.com/css?family=Roboto:400,700" rel="stylesheet">
+    <style>
+      body {
+	  margin: 100px 10%;
+	  font-family: 'Roboto';
+      }
+      #main-content {
+	  resize: none;
+      }
+      #copy-buttons {
+	  text-align: right;
+      }
+      #copy-buttons button {
+	  cursor: pointer;
+      }
+      #button-copy.btn-primary::after {
+	  content: 'Copy';
+      }
+      #button-copy.btn-success::after {
+	  content: 'Copied!';
+      }
+      #button-copy.btn-warning::after,
+      #button-copy-redirect.btn-warning::after {
+	  content: 'Copy failed; please copy manually';
+      }
+      #button-copy-redirect.btn-primary::after {
+	  content: 'Copy, and take me to the new site!';
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Hyperschedule has moved!</h1>
+    <p>
+      Hyperschedule can now be found
+      at <a href="https://hyperschedule.io">hyperschedule.io</a>.
+    </p>
+    <p>
+      Click the &ldquo;<strong>copy</strong>&rdquo; button below (or manually
+      select the region below and copy) to copy your saved courses, and use the
+      &ldquo;<strong>import/export</strong>&rdquo; feature
+      on <a href="https://hyperschedule.io">the new site</a> to load your data!
+    </p>
+    <div class="form-group">
+      <textarea id="main-content" class="form-control" readonly></textarea>
+    </div>
+    <div id="copy-buttons" class="form-group">
+      <button id="button-copy" class="btn btn-primary"
+	      data-clipboard-target="#main-content"></button>
+      <button id="button-copy-redirect" class="btn btn-secondary"
+	      data-clipboard-target="#main-content">Copy, and take me to the new
+      site!</button>
+    </div>
+    
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"
+	    integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN"
+	    crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.3/umd/popper.min.js"
+	    integrity="sha384-vFJXuSJphROIrBnz7yo7oB41mKfc8JzQZiCq4NCceLEaO4IHwicKwpJf9c9IpFgh"
+	    crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/js/bootstrap.min.js"
+	    integrity="sha384-alpBpkh1PFOepccYVYDB4do5UnbKysX5WZXm3XxPqe5iKTfUKjNkCk9SaVuEZflJ"
+	    crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/1.7.1/clipboard.min.js"></script>
+
+    <script type="text/javascript">
+      const copyStateTimeout = 10000;
+      
+      let contentArea = document.getElementById('main-content');
+      let copyButton = document.getElementById('button-copy');
+      let copyRedirectButton = document.getElementById('button-copy-redirect');
+      
+      contentArea.value = localStorage.getItem('selectedCourses');
+
+      contentArea.addEventListener('focus', (e) => {
+	e.preventDefault();
+	contentArea.select();
+      });
+      contentArea.addEventListener('mouseup', (e) => {
+	e.preventDefault();
+      });
+
+      let clipboard = new Clipboard(copyButton);
+      
+      clipboard.on('success', success(copyButton));
+      clipboard.on('error', error(copyButton));
+      
+      let redirectClipboard = new Clipboard(copyRedirectButton);
+      
+      redirectClipboard.on('success', (e) => {
+	window.location.href = 'https://hyperschedule.io';
+      });
+      redirectClipboard.on('error', error(copyRedirectButton));
+      
+      function success(button) {
+	return (e) => {
+	  button.classList.remove('btn-primary');
+	  button.classList.remove('btn-warning');
+	  button.classList.add('btn-success');
+
+	  setTimeout(clearState(button), copyStateTimeout);
+	}
+      }
+      
+      function error(button) {
+	return (e) => {
+	  copyButton.classList.remove('btn-primary');
+	  copyButton.classList.remove('btn-success');
+	  copyButton.classList.add('btn-warning');
+
+	  setTimeout(clearState(button), copyStateTimeout);
+	}
+      }
+      
+      function clearState(button) {
+	return () => {
+	  button.classList.remove('btn-warning');
+	  button.classList.remove('btn-success');
+	  button.classList.add('btn-primary');
+	}
+      }
+    </script>
+  </body>
+</html>
