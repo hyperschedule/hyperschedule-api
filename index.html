@@ -83,6 +83,8 @@
 	  window.location.replace(newAddress);
       }
 
+      contentArea.value = savedData;
+
       // auto-select copy area on focus
       contentArea.addEventListener('focus', (e) => {
 	e.preventDefault();
