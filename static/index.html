@@ -1,4 +1,4 @@
-,<!DOCTYPE html>
+<!DOCTYPE html>
 <html>
   <head>
     <title>Hyperschedule has moved!</title>
@@ -56,7 +56,7 @@
 	      data-clipboard-target="#main-content">Copy, and take me to the new
       site!</button>
     </div>
-    
+
     <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"
 	    integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN"
 	    crossorigin="anonymous"></script>
@@ -71,11 +71,11 @@
     <script type="text/javascript">
       const copyStateTimeout = 10000;
       const newAddress = 'https://hyperschedule.io';
-      
+
       let contentArea = document.getElementById('main-content');
       let copyButton = document.getElementById('button-copy');
       let copyRedirectButton = document.getElementById('button-copy-redirect');
-      
+
       let savedData = localStorage.getItem('selectedCourses');
 
       // redirect automatically if user has no saved data
@@ -96,17 +96,17 @@
 
       // clipboard buttons
       let clipboard = new Clipboard(copyButton);
-      
+
       clipboard.on('success', success(copyButton));
       clipboard.on('error', error(copyButton));
-      
+
       let redirectClipboard = new Clipboard(copyRedirectButton);
-      
+
       redirectClipboard.on('success', (e) => {
 	window.location.href = newAddress;
       });
       redirectClipboard.on('error', error(copyRedirectButton));
-      
+
       function success(button) {
 	return (e) => {
 	  button.classList.remove('btn-primary');
@@ -116,7 +116,7 @@
 	  setTimeout(clearState(button), copyStateTimeout);
 	}
       }
-      
+
       function error(button) {
 	return (e) => {
 	  copyButton.classList.remove('btn-primary');
@@ -126,7 +126,7 @@
 	  setTimeout(clearState(button), copyStateTimeout);
 	}
       }
-      
+
       function clearState(button) {
 	return () => {
 	  button.classList.remove('btn-warning');
