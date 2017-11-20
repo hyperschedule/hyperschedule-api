@@ -73,9 +73,7 @@ async function runWebserver()
 {
   const server = express();
   server.use(allowCrossDomain);
-  server.get('/', (req, res, next) => {
-    res.redirect(301, 'https://hyperschedule.netlify.com');
-  });
+  server.use(express.static('static'));
   server.get('/api/v1/all-courses', (req, res, next) => {
     if (courses)
     {
