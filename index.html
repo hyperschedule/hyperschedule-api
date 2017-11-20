@@ -70,13 +70,20 @@
 
     <script type="text/javascript">
       const copyStateTimeout = 10000;
+      const newAddress = 'https://hyperschedule.io';
       
       let contentArea = document.getElementById('main-content');
       let copyButton = document.getElementById('button-copy');
       let copyRedirectButton = document.getElementById('button-copy-redirect');
       
-      contentArea.value = localStorage.getItem('selectedCourses');
+      let savedData = localStorage.getItem('selectedCourses');
 
+      // redirect automatically if user has no saved data
+      if (savedData === null || savedData.trim().length === 0) {
+	  
+      }
+
+      // auto-select copy area on focus
       contentArea.addEventListener('focus', (e) => {
 	e.preventDefault();
 	contentArea.select();
@@ -85,6 +92,7 @@
 	e.preventDefault();
       });
 
+      // clipboard buttons
       let clipboard = new Clipboard(copyButton);
       
       clipboard.on('success', success(copyButton));
@@ -93,7 +101,7 @@
       let redirectClipboard = new Clipboard(copyRedirectButton);
       
       redirectClipboard.on('success', (e) => {
-	window.location.href = 'https://hyperschedule.io';
+	window.location.href = newAddress;
       });
       redirectClipboard.on('error', error(copyRedirectButton));
       
