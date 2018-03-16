@@ -8,8 +8,6 @@ import datetime as dt
 import re
 import json
 import os
-import site
-import sys
 
 os.environ['PATH'] = './node_modules/.bin:' + os.environ.get('PATH', '')
 
