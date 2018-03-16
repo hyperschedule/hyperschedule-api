@@ -117,11 +117,30 @@ for raw_course in raw_courses:
     quarter_credits = round(float(raw_course['credits']) / 0.25)
     begin_date = parse_date(raw_course['begin_date']).date()
     end_date = parse_date(raw_course['end_date']).date()
-    # First half-semester courses start before February 1
-    first_half = begin_date < dt.date(begin_date.year, 2, 1)
-    # Second half-semester courses end after April 1
-    second_half = end_date > dt.date(end_date.year, 4, 1)
-    assert first_half or second_half
+    # First half-semester courses start (spring) January 1 through
+    # January 31 or (fall) July 15 through September 15. (For some
+    # reason, MATH 30B in Fall 2017 is listed as starting August 8.)
+    first_half = (dt.date(begin_date.year, 1, 1) <
+                  begin_date <
+                  dt.date(begin_date.year, 1, 31)
+                  or
+                  dt.date(begin_date.year, 7, 15) <
+                  begin_date <
+                  dt.date(begin_date.year, 9, 15))
+    # Second half-semester courses for the spring end May 1 through
+    # May 31, but there's also frosh chem pt.II which just *has* to be
+    # different by ending 2/3 of the way through the semester. So we
+    # also count that by allowing April 1 through April 30. Sigh. Fall
+    # courses end December 1 through December 31.
+    second_half = (dt.date(end_date.year, 4, 1) <
+                   end_date <
+                   dt.date(end_date.year, 5, 31)
+                   or
+                   dt.date(end_date.year, 12, 1) <
+                   end_date <
+                   dt.date(end_date.year, 12, 31))
+    assert first_half or second_half, ("Weird course start/end dates (for course {})"
+                                       .format(repr(course_code)))
     courses.append({
         'department': department,
         'courseNumber': course_number,
