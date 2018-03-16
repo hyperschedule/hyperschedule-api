@@ -17,8 +17,17 @@ try:
     url = 'https://portal.hmc.edu/ICS/Portal_Homepage.jnz?portlet=Course_Schedules&screen=Advanced+Course+Search&screenType=next'
     browser.get(url)
 
-    term = Select(browser.find_element_by_id('pg0_V_ddlTerm'))
-    term.select_by_visible_text('SP 2018')
+    term_dropdown = Select(browser.find_element_by_id('pg0_V_ddlTerm'))
+    term_names = [option.text for option in term_dropdown.options]
+    terms = []
+    for term_name in term_names:
+        match = re.match(r'\s*(FA|SP)\s*([0-9]{4})\s*', term_name)
+        if match:
+            fall_or_spring, year_str = match.groups()
+            terms.append((int(year_str), fall_or_spring == 'FA', term_name))
+    assert terms, "Couldn't parse any term names (from: {})".format(repr(term_names))
+    most_recent_term = max(terms)
+    term_dropdown.select_by_visible_text(most_recent_term[2])
 
     title = browser.find_element_by_id('pg0_V_txtTitleRestrictor')
     title.clear()
