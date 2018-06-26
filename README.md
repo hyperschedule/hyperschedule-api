@@ -1,67 +1,46 @@
-**Hyperschedule Scraper**: retrieving course data from the worst
+**Hyperschedule scraper**: retrieving course data from the worst
 database ever.
+
+## Live demo
+
+Checkout https://hyperschedule.herokuapp.com/api/v1/all-courses!
 
 ## See also
 
-Hyperschedule has three services: the [front-end webapp][webapp], the
-[course catalog API][api], and the Portal scraper (this repository).
-
-Currently, the course catalog and the Portal scraper are still one
-service. They will be separated once the [new API][new-api] is up and
-running.
+This repository contains only the backend web service for
+Hyperschedule, which scrapes information from the Claremont Colleges
+course catalog and serves a single JSON endpoint as well as an index
+HTML page that redirects people to the frontend webapp (since the
+frontend webapp was *previously* hosted on the same domain as the
+API). The code for the frontend webapp is located [here][webapp].
 
 ## Local development
-### Install dependencies
-#### macOS
 
-Install [Homebrew]:
+Install [Yarn] and [Python 3][python]. It is considered best practice
+to create a virtualenv for the Python dependencies.
 
-    $ /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
-
-Install [Yarn]:
-
-    $ brew install yarn
-
-Install [Python 3][python]:
-
-    $ brew install python3
-
-### Set up project
-
-Install Node.js dependencies:
-
-    $ yarn
-
-Create a virtual environment:
-
-    $ python3 -m venv venv
-
-Enter the virtual environment:
-
-    $ source venv/bin/activate
-
-Install Python dependencies:
-
-    $ pip install -r requirements.txt
-
-### Run locally
-
-Run the scraper and serve the API on `localhost:3000` (use a different
-port by exporting `PORT`):
+Install the NPM dependencies by running `yarn` in the project root,
+and install the Python dependencies by running `pip3 install -r
+requirements.txt`. You are ready to run the backend server locally:
 
     $ yarn server
 
-Run in production mode (increases exponential backoff):
+This serves the API (and index HTML page) on `localhost:3000`; you may
+substitute a different port by exporting `PORT`. You can test the API
+by requesting `localhost:3000/api/v1/all-courses`, and the index HTML
+page by visiting `localhost:3000`.
 
-    $ yarn server --production
+To run the server in production mode, which increases the exponential
+backoff against the course catalog database, you can pass the
+`--production` option to `yarn server`.
 
 ### Deploy
 
-Deployment happens automatically when a commit is merged to `master`.
+Deployment to Heroku happens automatically when a commit is merged to
+`master`. If you have permission to manage the deployment pipeline,
+the administrator dashboard is [here][heroku].
 
-[api]: https://github.com/MuddCreates/hyperschedule-scraper
-[homebrew]: https://brew.sh/
-[new-api]: https://github.com/MuddCreates/hyperschedule-api
+[heroku]: https://dashboard.heroku.com/apps/hyperschedule
 [python]: https://www.python.org/
 [webapp]: https://github.com/MuddCreates/hyperschedule
 [yarn]: https://yarnpkg.com/en/
