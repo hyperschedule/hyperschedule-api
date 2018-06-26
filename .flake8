@@ -1,4 +1,3 @@
 [flake8]
 
-ignore = E, W
-select = F
+ignore = E302, E305, W503
