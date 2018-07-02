@@ -401,6 +401,10 @@ class HTTPHandler(http.server.BaseHTTPRequestHandler):
         else:
             self.send_error(404)
 
+    def end_headers(self):
+        self.send_header("Access-Control-Allow-Origin", "*")
+        http.server.BaseHTTPRequestHandler.end_headers(self)
+
     def log_message(self, format, *args):
         log(format % args)
 
