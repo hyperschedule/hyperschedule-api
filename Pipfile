@@ -4,6 +4,10 @@ name = "pypi"
 url = "https://pypi.python.org/simple"
 verify_ssl = true
 
+[requires]
+
+python_full_version = "3.7.0"
+
 [packages]
 
 "beautifulsoup4" = "*"
