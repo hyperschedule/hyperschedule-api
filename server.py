@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 
 import bs4
+import copy
 import datetime
 import dateutil.parser
+import http
 import http.server
+import itertools
 import json
+import json.decoder
 import natural.date
 import os
 import re
@@ -32,8 +36,16 @@ def die(message):
 
 ## Thread-global variables
 
+INITIAL_COURSE_DATA = {
+    "current": None,
+    "index": None,
+    "initial_timestamp": None,
+    "updates": [],
+    "timestamp": None,
+}
+
 thread_lock = threading.Lock()
-course_data = {}
+course_data = copy.deepcopy(INITIAL_COURSE_DATA)
 
 ## Course data retrieval
 
@@ -132,12 +144,56 @@ def schedule_sort_key(slot):
 def days_sort_key(day):
     return
 
-def course_index_key(course):
-    return (course["department"],
-            course["courseNumber"],
-            course["courseCodeSuffix"],
-            course["school"],
-            course["section"])
+COURSE_ATTRS = [
+    "courseCodeSuffix",
+    "courseName",
+    "courseNumber",
+    "courseStatus",
+    "department",
+    "endDate",
+    "faculty",
+    "firstHalfSemester",
+    "openSeats",
+    "quarterCredits",
+    "schedule",
+    "school",
+    "secondHalfSemester",
+    "section",
+    "startDate",
+    "totalSeats",
+]
+
+COURSE_INDEX_ATTRS = (
+    "department",
+    "courseNumber",
+    "courseCodeSuffix",
+    "school",
+    "section",
+)
+
+COURSE_INDEX_ATTRS_CONVERT_TO_INT = {
+    "department": False,
+    "courseNumber": True,
+    "courseCodeSuffix": False,
+    "school": False,
+    "section": True,
+}
+
+assert set(COURSE_INDEX_ATTRS) == set(COURSE_INDEX_ATTRS_CONVERT_TO_INT)
+
+def course_to_index_key(course):
+    return "/".join(str(course[attr]) for attr in COURSE_INDEX_ATTRS)
+
+def course_from_index_key(key):
+    course = {}
+    for attr, value in zip(COURSE_INDEX_ATTRS, key.split("/")):
+        if COURSE_INDEX_ATTRS_CONVERT_TO_INT[attr]:
+            value = int(value)
+        course[attr] = value
+    return course
+
+def course_sort_key(course):
+    return tuple(course[attr] for attr in COURSE_INDEX_ATTRS)
 
 COURSE_REGEX = r"([A-Z]+) *?([0-9]+) *([A-Z]*[0-9]?) *([A-Z]{2})-([0-9]+)"
 SCHEDULE_REGEX = (r"(?:([MTWRFSU]+)\xa0)?([0-9]+:[0-9]+(?: ?[AP]M)?) - "
@@ -153,6 +209,9 @@ def process_course(raw_course):
     department, course_number, num_suffix, school, section = match.groups()
     if not department:
         raise ScrapeError("empty string for department")
+    if "/" in department:
+        raise ScrapeError("department contains slashes: {}"
+                          .format(repr(department)))
     try:
         course_number = int(course_number)
     except ValueError:
@@ -161,8 +220,13 @@ def process_course(raw_course):
     if course_number <= 0:
         raise ScrapeError(
             "non-positive course number: {}".format(course_number))
+    if "/" in num_suffix:
+        raise ScrapeError("course code suffix contains slashes: {}"
+                          .format(repr(num_suffix)))
     if not school:
         raise ScrapeError("empty string for school")
+    if "/" in school:
+        raise ScrapeError("school contains slashes: {}".format(repr(school)))
     try:
         section = int(section)
     except ValueError:
@@ -295,9 +359,12 @@ def get_latest_course_list(browser):
             raise (ScrapeError("could not process course {}: {}"
                                .format(repr(raw_course["course_code"]), e))
                    .with_traceback(sys.exc_info()[2]))
-    courses.sort(key=course_index_key)
+    courses.sort(key=course_sort_key)
     return courses
 
+# This should probably only be using attributes in COURSE_INDEX_ATTRS,
+# so that any two non-distinct courses (see the API documentation)
+# have the same formatted course code.
 def format_course_code(course):
     return "{} {:03d}{} {}-{:02d}".format(
         course["department"],
@@ -309,44 +376,140 @@ def format_course_code(course):
 def index_courses(courses):
     course_index = {}
     for course in courses:
-        key = course_index_key(course)
+        key = course_to_index_key(course)
         if key in course_index:
             raise ScrapeError("more than one course matching {}"
                               .format(repr(format_course_code(course))))
         course_index[key] = course
     return course_index
 
-def update_course_data(timestamp, courses):
+def compute_update(old_courses_index, new_courses_index):
+    old_courses_keys = set(old_courses_index)
+    new_courses_keys = set(new_courses_index)
+    maybe_modified_keys = new_courses_keys & old_courses_keys
+    modified_keys_and_attrs = {}
+    for key in maybe_modified_keys:
+        old_course = old_courses_index[key]
+        new_course = new_courses_index[key]
+        attrs = []
+        for attr in COURSE_ATTRS:
+            if old_course[attr] != new_course[attr]:
+                attrs.append(attr)
+        if attrs:
+            modified_keys_and_attrs[key] = attrs
+    return {
+        "added": list(new_courses_keys - old_courses_keys),
+        "removed": list(old_courses_keys - new_courses_keys),
+        "modified": modified_keys_and_attrs,
+    }
+
+def compute_diff(since):
+    added = set()
+    removed = set()
+    modified = {}
+    for timestamp, update in course_data["updates"]:
+        print("checking update for timestamp {}".format(timestamp))
+        print("is timestamp {} > since {}".format(timestamp, since))
+        if timestamp > since:
+            print("processing")
+            for key, attrs in update["modified"].items():
+                assert key not in removed
+                if key not in modified:
+                    modified[key] = set()
+                modified[key] |= set(attrs)
+            for key in update["added"]:
+                assert key not in modified and key not in added
+                if key in removed:
+                    removed.remove(key)
+                    modified[key] = set(COURSE_ATTRS)
+                else:
+                    added.add(key)
+            for key in update["removed"]:
+                assert key not in removed
+                if key in modified:
+                    del modified[key]
+                if key in added:
+                    added.remove(key)
+                else:
+                    removed.add(key)
+    index = course_data["index"]
+    added_courses = []
+    for key in added:
+        added_courses.append(index[key])
+    removed_courses = []
+    for key in removed:
+        removed_courses.append(course_from_index_key(key))
+    modified_courses = []
+    for key in modified:
+        current_course = index[key]
+        course = {}
+        attrs = modified[key]
+        for attr in itertools.chain(COURSE_INDEX_ATTRS, attrs):
+            course[attr] = current_course[attr]
+        modified_courses.append(course)
+    return {
+        "added": added_courses,
+        "removed": removed_courses,
+        "modified": modified_courses,
+    }
+
+MAX_UPDATES_SAVED = 100
+
+def update_course_data(timestamp, courses, index):
     global course_data
     with thread_lock:
-        course_data = {
-            "courses": courses,
-            "last_update": timestamp,
-        }
+        last_index = course_data["index"]
+        if last_index is not None:
+            updates = course_data["updates"]
+            # Use a list so we can serialize to JSON.
+            updates.append([timestamp, compute_update(last_index, index)])
+            if len(updates) > MAX_UPDATES_SAVED:
+                updates[:] = updates[len(updates) - MAX_UPDATES_SAVED:]
+        else:
+            course_data["initial_timestamp"] = timestamp
+        course_data["current"] = courses
+        course_data["index"] = index
+        course_data["timestamp"] = timestamp
 
 def fetch_and_update_course_data(browser):
-    timestamp = datetime.datetime.now()
+    timestamp = int(datetime.datetime.now().timestamp())
     courses = get_latest_course_list(browser)
-    index_courses(courses)
-    update_course_data(timestamp, courses)
+    update_course_data(timestamp, courses, index_courses(courses))
 
-def run_fetch_task(browser, backoff_factor, base_delay, delay=None):
-    delay = delay or base_delay
+def write_course_data_to_cache_file():
+    log("Writing course data to cache on disk...")
+    with open(COURSE_DATA_CACHE_FILE, "w") as f:
+        json.dump(course_data, f)
+    log("Finished writing course data to disk.")
+
+COURSE_DATA_CACHE_FILE = os.path.join(
+    os.path.dirname(__file__), "course-data.json")
+
+def run_single_fetch_task(browser, use_cache):
     try:
         log("Starting course data update...")
         fetch_and_update_course_data(browser)
+        if use_cache:
+            write_course_data_to_cache_file()
     except Exception:
         log("Failed to update course data:\n"
             + traceback.format_exc().rstrip())
-        delay *= backoff_factor
-        log("Trying again after {:.0f} seconds.".format(delay))
+        return False
     else:
         log("Finished course data update.")
+        return True
+
+def run_fetch_task(browser, backoff_factor, base_delay, use_cache, delay=None):
+    delay = delay or base_delay
+    if run_single_fetch_task(browser, use_cache):
         delay = base_delay
         log("Updating again after {:.0f} seconds.".format(delay))
+    else:
+        delay *= backoff_factor
+        log("Trying again after {:.0f} seconds.".format(delay))
     t = threading.Timer(
         delay, lambda: run_fetch_task(
-            browser, backoff_factor, base_delay, delay))
+            browser, backoff_factor, base_delay, use_cache, delay))
     t.start()
 
 ## Server
@@ -364,42 +527,146 @@ ERROR_MESSAGE_FORMAT = """\
 </html>
 """
 
+class HTTPServer(http.server.HTTPServer):
+
+    def __init__(self, attrs, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for key, value in attrs.items():
+            setattr(self, key, value)
+
 class HTTPHandler(http.server.BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path == "/":
             with open("index.html", "rb") as f:
                 html = f.read()
-                self.send_response(200)
+                self.send_response(http.HTTPStatus.OK)
                 self.send_header("Content-Type", "text/html")
                 self.end_headers()
                 self.wfile.write(html)
-        elif self.path.rstrip("/") == "/api/v1/all-courses":
+            return
+        match = re.match(r"/api/v([12])/all-courses/?", self.path)
+        if match:
             with thread_lock:
-                if "courses" in course_data:
-                    self.send_response(200)
+                if course_data["current"]:
+                    courses = course_data["current"]
+                    timestamp = course_data["timestamp"]
+                    if match.group(1) == "1":
+                        # Paranoid backwards compatibility for the
+                        # output format of the old API.
+                        now = int(datetime.datetime.now().timestamp())
+                        last_updated = natural.date.delta(
+                            timestamp, now,
+                            justnow=datetime.timedelta(seconds=45))[0]
+                        if last_updated != "just now":
+                            last_updated += " ago"
+                        response = {
+                            "courses": courses,
+                            "lastUpdate": last_updated,
+                        }
+                    else:
+                        response = {
+                            "courses": courses,
+                            "timestamp": timestamp,
+                        }
+                    response_body = json.dumps(response).encode()
+                    self.send_response(http.HTTPStatus.OK)
                     self.send_header("Content-Type", "application/json")
                     self.end_headers()
-                    courses = course_data["courses"]
-                    timestamp = course_data["last_update"]
-                    now = datetime.datetime.now()
-                    last_updated = natural.date.delta(
-                        timestamp, now,
-                        # For compatibility with the old API server
-                        # which used moment.js.
-                        justnow=datetime.timedelta(seconds=45))[0]
-                    if last_updated != "just now":
-                        last_updated += " ago"
-                    response = json.dumps({
-                        "courses": courses,
-                        "lastUpdate": last_updated,
-                    })
-                    self.wfile.write(response.encode())
+                    self.wfile.write(response_body)
                 else:
-                    self.send_error(503, explain=("The course data is not yet "
-                                                  "available. Please wait"))
-        else:
-            self.send_error(404)
+                    self.send_error(http.HTTPStatus.SERVICE_UNAVAILABLE,
+                                    explain=("The course data is not yet "
+                                             "available. Please wait"))
+            return
+        match = re.match(r"/api/v2/courses-since/([-0-9]+)/?", self.path)
+        if match:
+            with thread_lock:
+                try:
+                    since = int(match.group(1))
+                except ValueError:
+                    self.send_error(
+                        http.HTTPStatus.BAD_REQUEST,
+                        explain=("Malformed timestamp {}"
+                                 .format(repr(match.group(1)))))
+                    return
+                timestamp = course_data["timestamp"]
+                if ((course_data["current"] and
+                     since >= course_data["initial_timestamp"])):
+                    diff = compute_diff(since)
+                    response = {
+                        "incremental": True,
+                        "diff": diff,
+                        "timestamp": timestamp,
+                    }
+                elif course_data["current"]:
+                    response = {
+                        "incremental": False,
+                        "courses": course_data["current"],
+                        "timestamp": timestamp,
+                    }
+                else:
+                    self.send_error(http.HTTPStatus.SERVICE_UNAVAILABLE,
+                                    explain=("The course data is not yet "
+                                             "available. Please wait"))
+                    return
+                response_body = json.dumps(response).encode()
+            self.send_response(http.HTTPStatus.OK)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(response_body)
+            return
+        match = re.match(r"/experimental/course-data/?", self.path)
+        if match:
+            with thread_lock:
+                response_body = json.dumps(course_data).encode()
+            self.send_response(http.HTTPStatus.OK)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(response_body)
+            return
+        self.send_error(http.HTTPStatus.NOT_FOUND)
+        return
+
+    def do_PUT(self):
+        global course_data
+        if not self.server.debug:
+            self.send_error(http.HTTPStatus.NOT_IMPLEMENTED,
+                            message="Unsupported method ('PUT')")
+            return
+        match = re.match(r"/debug/set-courses(?:/([-0-9]+))?/?", self.path)
+        if match:
+            timestamp = int(match.group(1) or
+                            datetime.datetime.now().timestamp())
+            content_length = int(
+                self.headers.get("Content-Length", 0))
+            courses = json.loads(self.rfile.read(content_length).decode())
+            index = index_courses(courses)
+            update_course_data(timestamp, courses, index)
+            if self.server.use_cache:
+                write_course_data_to_cache_file()
+            self.send_response(http.HTTPStatus.NO_CONTENT)
+            self.end_headers()
+            return
+        if self.path.rstrip("/") == "/debug/scrape":
+            t = threading.Thread(
+                target=lambda: run_single_fetch_task(
+                    self.server.browser,
+                    self.server.use_cache))
+            t.start()
+            self.send_response(http.HTTPStatus.NO_CONTENT)
+            self.end_headers()
+            return
+        if self.path.rstrip("/") == "/debug/reset":
+            with thread_lock:
+                course_data = INITIAL_COURSE_DATA
+                if self.server.use_cache:
+                    write_course_data_to_cache_file()
+            self.send_response(http.HTTPStatus.NO_CONTENT)
+            self.end_headers()
+            return
+        self.send_error(http.HTTPStatus.NOT_FOUND)
+        return
 
     def end_headers(self):
         self.send_header("Access-Control-Allow-Origin", "*")
@@ -413,11 +680,6 @@ class HTTPHandler(http.server.BaseHTTPRequestHandler):
 
     error_message_format = ERROR_MESSAGE_FORMAT
 
-def run_server(port):
-    httpd = http.server.HTTPServer(("", port), HTTPHandler)
-    log("Starting server on port {}...".format(port))
-    httpd.serve_forever()
-
 if __name__ == "__main__":
     port = os.environ.get("PORT", "3000")
     try:
@@ -426,6 +688,8 @@ if __name__ == "__main__":
         die("malformed PORT: {}".format(repr(port)))
     production = None
     headless = None
+    use_cache = None
+    use_scraper = None
     for arg in sys.argv[1:]:
         if arg in ("--dev", "--develop", "--development"):
             production = False
@@ -435,20 +699,49 @@ if __name__ == "__main__":
             headless = True
         elif arg in ("--no-headless"):
             headless = False
+        elif arg in ("--cache"):
+            use_cache = True
+        elif arg in ("--no-cache"):
+            use_cache = False
+        elif arg in ("--scrape"):
+            use_scraper = True
+        elif arg in ("--no-scrape"):
+            use_scraper = False
         else:
             die("unexpected argument: {}".format(repr(arg)))
     if production is None:
         die("you must specify either --dev or --prod")
     if headless is None:
         headless = True
+    if use_cache is None:
+        use_cache = not production
+    if use_scraper is None:
+        use_scraper = True
     browser = get_browser(headless)
-    backoff_factor = 1.5 if production else 1.0
-    base_delay = 5
-    t = threading.Thread(
-        target=lambda: run_fetch_task(
-            browser, backoff_factor, base_delay), daemon=True)
-    t.start()
-    run_server(port)
+    if use_cache:
+        try:
+            with open(COURSE_DATA_CACHE_FILE) as f:
+                log("Loading cached course data from disk...")
+                course_data = json.load(f)
+                log("Finished loading cached course data.")
+        except FileNotFoundError:
+            pass
+        except json.decoder.JSONDecodeError:
+            log("Failed to load cached course data due to JSON parse error.")
+    if use_scraper:
+        backoff_factor = 1.5 if production else 1.0
+        base_delay = 5
+        t = threading.Thread(
+            target=lambda: run_fetch_task(
+                browser, backoff_factor, base_delay, use_cache), daemon=True)
+        t.start()
+    httpd = HTTPServer({
+        "debug": not production,
+        "browser": browser,
+        "use_cache": use_cache,
+    }, ("", port), HTTPHandler)
+    log("Starting server on port {}...".format(port))
+    httpd.serve_forever()
 
 # Local Variables:
 # outline-regexp: "^##+"
