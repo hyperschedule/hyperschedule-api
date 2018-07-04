@@ -12,8 +12,8 @@ and migrate to the new frontend domain.
 
 You may see the webapp in action by visiting the following URLs:
 
-* https://hyperschedule.herokuapp.com/api/v1/all-courses
-* https://hyperschedule.herokuapp.com/
+* <https://hyperschedule.herokuapp.com/api/v1/all-courses>
+* <https://hyperschedule.herokuapp.com/>
 
 ## Service usage
 
