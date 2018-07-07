@@ -408,10 +408,7 @@ def compute_diff(since):
     removed = set()
     modified = {}
     for timestamp, update in course_data["updates"]:
-        print("checking update for timestamp {}".format(timestamp))
-        print("is timestamp {} > since {}".format(timestamp, since))
         if timestamp > since:
-            print("processing")
             for key, attrs in update["modified"].items():
                 assert key not in removed
                 if key not in modified:
