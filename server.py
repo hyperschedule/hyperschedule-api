@@ -524,7 +524,7 @@ ERROR_MESSAGE_FORMAT = """\
 </html>
 """
 
-class HTTPServer(http.server.HTTPServer):
+class HTTPServer(http.server.ThreadingHTTPServer):
 
     def __init__(self, attrs, *args, **kwargs):
         super().__init__(*args, **kwargs)
