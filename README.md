@@ -28,6 +28,42 @@ The following endpoints are exposed:
     * `lastUpdate`:
       * non-empty human-readable string describing the time elapsed
         since the course list was last recomputed on the server
+* `/api/v2/all-courses`
+  * returns a JSON map with the following keys:
+    * `courses`:
+      * non-empty list of distinct course objects (see below)
+    * `timestamp`:
+      * integer UNIX timestamp representing the time at which the data
+        was retrieved
+* `/api/v2/courses-since/<timestamp>`
+  * `<timestamp>` is an integer UNIX timestamp; this endpoint returns
+    changes to the course list *since* that timestamp. It is expected
+    that the value of this parameter is taken from the `timestamp`
+    field in a previous query to the API.
+  * returns a JSON map with the following keys:
+    * `incremental`: boolean indicating whether an incremental update
+      is possible (incremental update data is only stored on the
+      server for approximately the last 30 minutes)
+    * `courses` (only if `incremental` is `false`):
+      * non-empty list of distinct course objects (see below)
+    * `diff` (only if `incremental` is `true`):
+      * JSON map with the following keys:
+        * `added`:
+          * list of maps, possibly empty, representing course objects
+            that have been added since `<timestamp>`
+        * `removed`:
+          * list of maps, possibly empty, representing course objects
+            that have been removed since `<timestamp>`. Only the keys
+            necessary to distinctly identify the course (see below)
+            are included.
+        * `modified`:
+          * list of maps, possibly empty, representing course objects
+            that have been modified since `<timestamp>`. Only the keys
+            necessary to distinctly identify the course (see below),
+            as well as the keys which have changed, are included.
+    * `timestamp`:
+      * integer UNIX timestamp representing the time at which the data
+        was retrieved
 
 Course objects are maps with the following keys:
 * `courseCodeSuffix`
@@ -51,7 +87,7 @@ Course objects are maps with the following keys:
 * `quarterCredits`
   * non-negative integer
 * `schedule`
-  * list of maps, possible empty, with keys:
+  * list of maps, possibly empty, with keys:
     * `days`
       * non-empty string containing some subset of the characters
         `MTWRFSU` in that order, without duplicates
