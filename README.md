@@ -10,7 +10,7 @@ domain as the API, the service in this repository also serves a single
 HTML page at the domain root which directs users to copy their data
 and migrate to the new frontend domain.
 
-You may see the webapp in action by visiting the following URLs:
+You may see the service in action by visiting the following URLs:
 
 * <https://hyperschedule.herokuapp.com/api/v2/all-courses>
 * <https://hyperschedule.herokuapp.com/>
