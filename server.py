@@ -9,8 +9,10 @@ import http.server
 import itertools
 import json
 import json.decoder
+import multiprocessing
 import natural.date
 import os
+import queue
 import re
 import selenium.webdriver
 import selenium.webdriver.support.ui
@@ -470,7 +472,19 @@ def update_course_data(timestamp, courses, index):
 
 def fetch_and_update_course_data(browser):
     timestamp = int(datetime.datetime.now().timestamp())
-    courses = get_latest_course_list(browser)
+    process_queue = multiprocessing.Queue()
+    process = multiprocessing.Process(
+        target=lambda: process_queue.put(get_latest_course_list(browser)))
+    process.start()
+    try:
+        # Usually the course data update takes about 20 seconds.
+        # Giving it 60 seconds should be more than enough.
+        courses = process_queue.get(timeout=60)
+    except queue.Empty:
+        process.terminate()
+        raise ScrapeError("timed out")
+    finally:
+        process.join()
     update_course_data(timestamp, courses, index_courses(courses))
 
 def write_course_data_to_cache_file():
