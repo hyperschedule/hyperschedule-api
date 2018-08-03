@@ -15,6 +15,7 @@ import os
 import queue
 import re
 import selenium.webdriver
+import selenium.webdriver.chrome.options
 import selenium.webdriver.support.ui
 import sys
 import threading
@@ -53,10 +54,19 @@ course_data = copy.deepcopy(INITIAL_COURSE_DATA)
 
 def get_browser(headless):
     if headless:
-        # We can't use headless Chrome because of a bug in
-        # ChromeDriver, see
+        options = selenium.webdriver.chrome.options.Options()
+        options.set_headless(True)
+        # Disabling scroll bars is important, see
         # https://bugs.chromium.org/p/chromedriver/issues/detail?id=2487.
-        return selenium.webdriver.PhantomJS()
+        options.add_argument("--hide-scrollbars")
+        # The Chrome binary is at a nonstandard location on Heroku,
+        # see [1].
+        #
+        # [1]: https://github.com/heroku/heroku-buildpack-google-chrome.
+        binary = os.environ.get("GOOGLE_CHROME_SHIM")
+        if binary:
+            options.binary_location = binary
+        return selenium.webdriver.Chrome(chrome_options=options)
     else:
         return selenium.webdriver.Chrome()
 

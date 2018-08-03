@@ -122,9 +122,7 @@ First, install the following dependencies:
 
 * [Python 3][python]
 * [Pipenv][pipenv]
-* [PhantomJS][phantomjs] (to use the default headless scraper)
-* [ChromeDriver][chromedriver] (to instead use the graphical scraper
-  for debugging)
+* [ChromeDriver][chromedriver]
 
 Then, install the Python dependencies into a virtualenv by running:
 
@@ -140,9 +138,9 @@ port that the server listens on by exporting the environment variable
 `PORT`. Further configuration may be achieved via command-line
 arguments:
 
-* `--[no-]headless`: Use PhantomJS for the web scraping, rather than a
-  graphical Google Chrome instance. Defaults to `--headless`. Change
-  it if you wish to debug the web scraping.
+* `--[no-]headless`: Don't spawn a graphical Chrome window for the web
+  scraping. Defaults to `--headless`. Change it if you wish to debug
+  the web scraping.
 * `--[no-]cache`: When the server starts up, try to read in the course
   data from `courses.json` in this directory. Whenever the course data
   is modified, write it back to that file. This allows the course data
@@ -210,7 +208,6 @@ server using the undocumented and unsupported
 [jq]: https://stedolan.github.io/jq/
 [httpie]: https://httpie.org/
 [hyperschedule.io]: https://hyperschedule.io/
-[phantomjs]: http://phantomjs.org/
 [pipenv]: https://docs.pipenv.org/
 [portal]: https://portal.hmc.edu/ICS/Portal_Homepage.jnz?portlet=Course_Schedules&screen=Advanced+Course+Search&screenType=next
 [python]: https://www.python.org/
