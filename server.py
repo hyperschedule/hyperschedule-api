@@ -208,7 +208,7 @@ def course_sort_key(course):
     return tuple(course[attr] for attr in COURSE_INDEX_ATTRS)
 
 COURSE_REGEX = r"([A-Z]+) *?([0-9]+) *([A-Z]*[0-9]?) *([A-Z]{2})-([0-9]+)"
-SCHEDULE_REGEX = (r"(?:([MTWRFSU]+)\xa0)?([0-9]+:[0-9]+(?: ?[AP]M)?) - "
+SCHEDULE_REGEX = (r"([MTWRFSU]+)\xa0([0-9]+:[0-9]+(?: ?[AP]M)?) - "
                   "([0-9]+:[0-9]+ ?[AP]M); ([A-Za-z0-9, ]+)")
 DAYS_OF_WEEK = "MTWRFSU"
 
