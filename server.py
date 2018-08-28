@@ -650,6 +650,15 @@ class HTTPHandler(http.server.BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(response_body)
             return
+        match = re.match(r"/api/v2/malformed-courses/?", self.path)
+        if match:
+            with thread_lock:
+                response_body = json.dumps(course_data["malformed"]).encode()
+            self.send_response(http.HTTPStatus.OK)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(response_body)
+            return
         match = re.match(r"/experimental/course-data/?", self.path)
         if match:
             with thread_lock:

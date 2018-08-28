@@ -70,6 +70,12 @@ The following endpoints are exposed:
     * `malformedCourseCount`:
       * non-negative integer giving the number of courses whose
         information was entered incorrectly by the registrar
+* `/api/v2/malformed-courses`
+  * possibly empty list of strings representing malformed courses
+    which are not included in the normal course listing (the length of
+    this list equals the value of `malformedCourseCount` returned from
+    the other endpoints). The format of these strings should not be
+    relied upon.
 
 Course objects are maps with the following keys:
 * `courseCodeSuffix`
