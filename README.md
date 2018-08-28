@@ -35,6 +35,9 @@ The following endpoints are exposed:
     * `timestamp`:
       * integer UNIX timestamp representing the time at which the data
         was retrieved
+    * `malformedCourseCount`:
+      * non-negative integer giving the number of courses whose
+        information was entered incorrectly by the registrar
 * `/api/v2/courses-since/<timestamp>`
   * `<timestamp>` is an integer UNIX timestamp; this endpoint returns
     changes to the course list *since* that timestamp. It is expected
@@ -64,6 +67,9 @@ The following endpoints are exposed:
     * `timestamp`:
       * integer UNIX timestamp representing the time at which the data
         was retrieved
+    * `malformedCourseCount`:
+      * non-negative integer giving the number of courses whose
+        information was entered incorrectly by the registrar
 
 Course objects are maps with the following keys:
 * `courseCodeSuffix`
@@ -115,6 +121,9 @@ values for at least one of `school`, `department`, `courseNumber`,
 `courseCodeSuffix`, or `section`. Since none of these values are
 allowed to contain slashes, they may be concatenated reversibly with
 slashes to form a unique string key by which to index the course.
+
+Additional fields may be added to existing endpoints without
+incrementing the API version.
 
 ## Development
 
