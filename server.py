@@ -15,6 +15,7 @@ import os
 import queue
 import re
 import selenium.webdriver
+import selenium.webdriver.chrome.options
 import selenium.webdriver.support.ui
 import sys
 import threading
@@ -53,10 +54,19 @@ course_data = copy.deepcopy(INITIAL_COURSE_DATA)
 
 def get_browser(headless):
     if headless:
-        # We can't use headless Chrome because of a bug in
-        # ChromeDriver, see
+        options = selenium.webdriver.chrome.options.Options()
+        options.set_headless(True)
+        # Disabling scroll bars is important, see
         # https://bugs.chromium.org/p/chromedriver/issues/detail?id=2487.
-        return selenium.webdriver.PhantomJS()
+        options.add_argument("--hide-scrollbars")
+        # The Chrome binary is at a nonstandard location on Heroku,
+        # see [1].
+        #
+        # [1]: https://github.com/heroku/heroku-buildpack-google-chrome.
+        binary = os.environ.get("GOOGLE_CHROME_SHIM")
+        if binary:
+            options.binary_location = binary
+        return selenium.webdriver.Chrome(chrome_options=options)
     else:
         return selenium.webdriver.Chrome()
 
@@ -140,6 +150,12 @@ def parse_portal_html(html):
 
     return raw_courses
 
+def format_raw_course(raw_course):
+    # Try to put together a reasonable string representation of the
+    # course for use in error messages, if it is malformed.
+    desc = "{} {}".format(raw_course["course_code"], raw_course["course_name"])
+    return re.sub(r"\s+", " ", desc).strip()
+
 def schedule_sort_key(slot):
     return slot["days"], slot["startTime"], slot["endTime"]
 
@@ -219,7 +235,7 @@ def course_sort_key(course):
     return tuple(course[attr] for attr in COURSE_INDEX_ATTRS)
 
 COURSE_REGEX = r"([A-Z]+) *?([0-9]+) *([A-Z]*[0-9]?) *([A-Z]{2})-([0-9]+)"
-SCHEDULE_REGEX = (r"(?:([MTWRFSU]+)\xa0)?([0-9]+:[0-9]+(?: ?[AP]M)?) - "
+SCHEDULE_REGEX = (r"([MTWRFSU]+)\xa0([0-9]+:[0-9]+(?: ?[AP]M)?) - "
                   "([0-9]+:[0-9]+ ?[AP]M); ([A-Za-z0-9, ]+)")
 DAYS_OF_WEEK = "MTWRFSU"
 
@@ -376,15 +392,14 @@ def get_latest_course_list(browser):
     html = get_portal_html(browser)
     raw_courses = parse_portal_html(html)
     courses = []
+    malformed_courses = []
     for raw_course in raw_courses:
         try:
             courses.append(process_course(raw_course))
         except ScrapeError as e:
-            raise (ScrapeError("could not process course {}: {}"
-                               .format(repr(raw_course["course_code"]), e))
-                   .with_traceback(sys.exc_info()[2]))
+            malformed_courses.append(format_raw_course(raw_course))
     courses.sort(key=course_sort_key)
-    return courses
+    return courses, malformed_courses
 
 # This should probably only be using attributes in COURSE_INDEX_ATTRS,
 # so that any two non-distinct courses (see the API documentation)
@@ -476,7 +491,7 @@ def compute_diff(since):
 
 MAX_UPDATES_SAVED = 100
 
-def update_course_data(timestamp, courses, index):
+def update_course_data(timestamp, courses, index, malformed_courses):
     global course_data
     with thread_lock:
         last_index = course_data["index"]
@@ -491,6 +506,7 @@ def update_course_data(timestamp, courses, index):
         course_data["current"] = courses
         course_data["index"] = index
         course_data["timestamp"] = timestamp
+        course_data["malformed"] = malformed_courses
 
 def fetch_and_update_course_data(browser):
     timestamp = int(datetime.datetime.now().timestamp())
@@ -501,13 +517,14 @@ def fetch_and_update_course_data(browser):
     try:
         # Usually the course data update takes about 20 seconds.
         # Giving it 60 seconds should be more than enough.
-        courses = process_queue.get(timeout=60)
+        courses, malformed_courses = process_queue.get(timeout=60)
     except queue.Empty:
         process.terminate()
         raise ScrapeError("timed out")
     finally:
         process.join()
-    update_course_data(timestamp, courses, index_courses(courses))
+    update_course_data(
+        timestamp, courses, index_courses(courses), malformed_courses)
 
 def write_course_data_to_cache_file():
     log("Writing course data to cache on disk...")
@@ -601,6 +618,8 @@ class HTTPHandler(http.server.BaseHTTPRequestHandler):
                         response = {
                             "courses": courses,
                             "timestamp": timestamp,
+                            "malformedCourseCount":
+                            len(course_data["malformed"]),
                         }
                     response_body = json.dumps(response).encode()
                     self.send_response(http.HTTPStatus.OK)
@@ -631,12 +650,16 @@ class HTTPHandler(http.server.BaseHTTPRequestHandler):
                         "incremental": True,
                         "diff": diff,
                         "timestamp": timestamp,
+                        "malformedCourseCount":
+                        len(course_data["malformed"]),
                     }
                 elif course_data["current"]:
                     response = {
                         "incremental": False,
                         "courses": course_data["current"],
                         "timestamp": timestamp,
+                        "malformedCourseCount":
+                        len(course_data["malformed"]),
                     }
                 else:
                     self.send_error(http.HTTPStatus.SERVICE_UNAVAILABLE,
@@ -644,6 +667,15 @@ class HTTPHandler(http.server.BaseHTTPRequestHandler):
                                              "available. Please wait"))
                     return
                 response_body = json.dumps(response).encode()
+            self.send_response(http.HTTPStatus.OK)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(response_body)
+            return
+        match = re.match(r"/api/v2/malformed-courses/?", self.path)
+        if match:
+            with thread_lock:
+                response_body = json.dumps(course_data["malformed"]).encode()
             self.send_response(http.HTTPStatus.OK)
             self.send_header("Content-Type", "application/json")
             self.end_headers()

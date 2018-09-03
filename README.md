@@ -35,6 +35,9 @@ The following endpoints are exposed:
     * `timestamp`:
       * integer UNIX timestamp representing the time at which the data
         was retrieved
+    * `malformedCourseCount`:
+      * non-negative integer giving the number of courses whose
+        information was entered incorrectly by the registrar
 * `/api/v2/courses-since/<timestamp>`
   * `<timestamp>` is an integer UNIX timestamp; this endpoint returns
     changes to the course list *since* that timestamp. It is expected
@@ -64,6 +67,15 @@ The following endpoints are exposed:
     * `timestamp`:
       * integer UNIX timestamp representing the time at which the data
         was retrieved
+    * `malformedCourseCount`:
+      * non-negative integer giving the number of courses whose
+        information was entered incorrectly by the registrar
+* `/api/v2/malformed-courses`
+  * possibly empty list of strings representing malformed courses
+    which are not included in the normal course listing (the length of
+    this list equals the value of `malformedCourseCount` returned from
+    the other endpoints). The format of these strings should not be
+    relied upon.
 
 Course objects are maps with the following keys:
 * `courseCodeSuffix`
@@ -116,15 +128,16 @@ values for at least one of `school`, `department`, `courseNumber`,
 allowed to contain slashes, they may be concatenated reversibly with
 slashes to form a unique string key by which to index the course.
 
+Additional fields may be added to existing endpoints without
+incrementing the API version.
+
 ## Development
 
 First, install the following dependencies:
 
 * [Python 3][python]
 * [Pipenv][pipenv]
-* [PhantomJS][phantomjs] (to use the default headless scraper)
-* [ChromeDriver][chromedriver] (to instead use the graphical scraper
-  for debugging)
+* [ChromeDriver][chromedriver]
 
 Then, install the Python dependencies into a virtualenv by running:
 
@@ -140,9 +153,9 @@ port that the server listens on by exporting the environment variable
 `PORT`. Further configuration may be achieved via command-line
 arguments:
 
-* `--[no-]headless`: Use PhantomJS for the web scraping, rather than a
-  graphical Google Chrome instance. Defaults to `--headless`. Change
-  it if you wish to debug the web scraping.
+* `--[no-]headless`: Don't spawn a graphical Chrome window for the web
+  scraping. Defaults to `--headless`. Change it if you wish to debug
+  the web scraping.
 * `--[no-]cache`: When the server starts up, try to read in the course
   data from `courses.json` in this directory. Whenever the course data
   is modified, write it back to that file. This allows the course data
@@ -210,7 +223,6 @@ server using the undocumented and unsupported
 [jq]: https://stedolan.github.io/jq/
 [httpie]: https://httpie.org/
 [hyperschedule.io]: https://hyperschedule.io/
-[phantomjs]: http://phantomjs.org/
 [pipenv]: https://docs.pipenv.org/
 [portal]: https://portal.hmc.edu/ICS/Portal_Homepage.jnz?portlet=Course_Schedules&screen=Advanced+Course+Search&screenType=next
 [python]: https://www.python.org/
