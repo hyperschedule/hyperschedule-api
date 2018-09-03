@@ -143,6 +143,27 @@ def parse_portal_html(html):
 def schedule_sort_key(slot):
     return slot["days"], slot["startTime"], slot["endTime"]
 
+def time_slot_equal(slot_a, slot_b):
+    return slot_a["days"] == slot_b["days"] and \
+           slot_a["location"] == slot_b["location"] and \
+           slot_a["startTime"] == slot_b["startTime"] and \
+           slot_a["endTime"] == slot_b["endTime"]
+
+def schedule_unique(sorted_schedule):
+    '''
+    Return a new schedule of unique timeslots in sorted_schedule
+    (sorted order retained).
+    '''
+    if sorted_schedule == [] :
+        return []
+    new_schedule = [sorted_schedule[0]]
+    for i in range(1, len(sorted_schedule)):
+        time_slot_last = sorted_schedule[i-1]
+        time_slot_i = sorted_schedule[i]
+        if not time_slot_equal(time_slot_last, time_slot_i) :
+            new_schedule += [time_slot_i]
+    return new_schedule
+
 def days_sort_key(day):
     return
 
@@ -299,6 +320,7 @@ def process_course(raw_course):
             "endTime": end.strftime("%H:%M"),
         })
     schedule.sort(key=schedule_sort_key)
+    schedule = schedule_unique(schedule)
     quarter_credits = round(float(raw_course["credits"]) / 0.25)
     if quarter_credits < 0:
         raise ScrapeError(
