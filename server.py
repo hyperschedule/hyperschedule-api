@@ -21,6 +21,15 @@ import sys
 import threading
 import traceback
 
+## Utilities
+
+def unique(lst):
+    new_lst = []
+    for item in lst :
+        if item not in new_lst :
+            new_lst += [item]
+    return new_lst
+
 ## Exceptions
 
 class ScrapeError(Exception):
@@ -158,13 +167,6 @@ def format_raw_course(raw_course):
 
 def schedule_sort_key(slot):
     return slot["days"], slot["startTime"], slot["endTime"]
-
-def unique_schedule(schedule):
-    new_schedule = []
-    for time_slot in schedule :
-        if time_slot not in new_schedule :
-            new_schedule += [time_slot]
-    return new_schedule
 
 def days_sort_key(day):
     return
@@ -322,7 +324,7 @@ def process_course(raw_course):
             "endTime": end.strftime("%H:%M"),
         })
     schedule.sort(key=schedule_sort_key)
-    schedule = unique_schedule(schedule)
+    schedule = unique(schedule)
     quarter_credits = round(float(raw_course["credits"]) / 0.25)
     if quarter_credits < 0:
         raise ScrapeError(
