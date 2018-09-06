@@ -21,6 +21,15 @@ import sys
 import threading
 import traceback
 
+## Utilities
+
+def unique(lst):
+    new_lst = []
+    for item in lst:
+        if item not in new_lst:
+            new_lst.append(item)
+    return new_lst
+
 ## Exceptions
 
 class ScrapeError(Exception):
@@ -315,6 +324,7 @@ def process_course(raw_course):
             "endTime": end.strftime("%H:%M"),
         })
     schedule.sort(key=schedule_sort_key)
+    schedule = unique(schedule)
     quarter_credits = round(float(raw_course["credits"]) / 0.25)
     if quarter_credits < 0:
         raise ScrapeError(
