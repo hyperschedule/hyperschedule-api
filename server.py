@@ -224,7 +224,7 @@ def course_sort_key(course):
 
 COURSE_REGEX = r"([A-Z]+) *?([0-9]+) *([A-Z]*[0-9]?) *([A-Z]{2})-([0-9]+)"
 SCHEDULE_REGEX = (r"([MTWRFSU]+)\xa0([0-9]+:[0-9]+(?: ?[AP]M)?) - "
-                  "([0-9]+:[0-9]+ ?[AP]M); ([A-Za-z0-9, ]+)")
+                  r"([0-9]+:[0-9]+ ?[AP]M); ([A-Za-z0-9, ]+)")
 DAYS_OF_WEEK = "MTWRFSU"
 
 def process_course(raw_course):
@@ -234,33 +234,6 @@ def process_course(raw_course):
         raise ScrapeError(
             "malformed course code: {}".format(repr(course_code)))
     department, course_number, num_suffix, school, section = match.groups()
-    if not department:
-        raise ScrapeError("empty string for department")
-    if "/" in department:
-        raise ScrapeError("department contains slashes: {}"
-                          .format(repr(department)))
-    try:
-        course_number = int(course_number)
-    except ValueError:
-        raise ScrapeError(
-            "malformed course number: {}".format(repr(course_number)))
-    if course_number <= 0:
-        raise ScrapeError(
-            "non-positive course number: {}".format(course_number))
-    if "/" in num_suffix:
-        raise ScrapeError("course code suffix contains slashes: {}"
-                          .format(repr(num_suffix)))
-    if not school:
-        raise ScrapeError("empty string for school")
-    if "/" in school:
-        raise ScrapeError("school contains slashes: {}".format(repr(school)))
-    try:
-        section = int(section)
-    except ValueError:
-        raise ScrapeError(
-            "malformed section number: {}".format(repr(section)))
-    if section <= 0:
-        raise ScrapeError("non-positive section number: {}".format(section))
     course_name = raw_course["course_name"].strip()
     if not course_name:
         raise ScrapeError("empty string for course name")
@@ -275,10 +248,6 @@ def process_course(raw_course):
         raise ScrapeError(
             "malformed seat count: {}".format(repr(raw_course["seats"])))
     open_seats, total_seats = map(int, match.groups())
-    if open_seats < 0:
-        raise ScrapeError("negative open seat count: {}".format(open_seats))
-    if total_seats < 0:
-        raise ScrapeError("negative total seat count: {}".format(total_seats))
     course_status = raw_course["status"].lower()
     if course_status not in ("open", "closed", "reopened"):
         raise ScrapeError(
@@ -297,8 +266,6 @@ def process_course(raw_course):
                                   .format(repr(day), repr(slot)))
         days = "".join(
             sorted(set(days), key=lambda day: DAYS_OF_WEEK.index(day)))
-        if not days:
-            raise ScrapeError("no days in schedule slot {}".format(repr(slot)))
         if not (start.endswith("AM") or start.endswith("PM")):
             start += end[-2:]
         try:
@@ -312,8 +279,6 @@ def process_course(raw_course):
             raise ScrapeError("malformed end time {} in schedule slot {}"
                               .format(repr(end), repr(slot)))
         location = " ".join(location.strip().split())
-        if not location:
-            raise ScrapeError("empty string for location")
         # Start using camelCase here because we are constructing
         # objects that will be returned from the API as JSON, and our
         # API is camelCase.
