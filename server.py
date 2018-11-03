@@ -23,7 +23,7 @@ import traceback
 
 ## Utilities
 
-def unique(lst):
+def unique_preserve_order(lst):
     new_lst = []
     for item in lst:
         if item not in new_lst:
@@ -324,7 +324,7 @@ def process_course(raw_course):
             "endTime": end.strftime("%H:%M"),
         })
     schedule.sort(key=schedule_sort_key)
-    schedule = unique(schedule)
+    schedule = unique_preserve_order(schedule)
     quarter_credits = round(float(raw_course["credits"]) / 0.25)
     if quarter_credits < 0:
         raise ScrapeError(
