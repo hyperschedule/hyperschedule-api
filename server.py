@@ -20,6 +20,7 @@ import selenium.webdriver.support.ui
 import sys
 import threading
 import traceback
+import lingk_scraper
 
 ## Utilities
 
@@ -344,11 +345,18 @@ def process_course(raw_course):
 def get_latest_course_list(browser):
     html = get_portal_html(browser)
     raw_courses = parse_portal_html(html)
+    descrpition_dict = lingk_scraper.fetch_and_process_description_dict()
     courses = []
     malformed_courses = []
     for raw_course in raw_courses:
         try:
-            courses.append(process_course(raw_course))
+            course = process_course(raw_course)
+            descrpition_key = lingk_scraper.course_to_lingk_description_dict_key(course)
+            if descrpition_key in descrpition_dict :
+                course["courseDescription"] = descrpition_dict[descrpition_key]
+            else :
+                course["courseDescription"] = ""
+            courses.append(course)
         except ScrapeError as e:
             malformed_courses.append(format_raw_course(raw_course))
     courses.sort(key=course_sort_key)

@@ -17,5 +17,6 @@ python-dateutil = "*"
 # Pin selenium to work around
 # https://github.com/SeleniumHQ/selenium/issues/5296.
 selenium = "==3.8.0"
+requests = "*"
 
 [dev-packages]
