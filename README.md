@@ -218,6 +218,12 @@ The raw course data can be retrieved as JSON from the production
 server using the undocumented and unsupported
 `/experimental/course-data` endpoint.
 
+## Contributing
+
+Please do! Refer to the [contributor guidelines][contributing] first.
+
+[contributing]: CONTRIBUTING.md
+
 [chromedriver]: http://chromedriver.chromium.org/
 [frontend]: https://github.com/MuddCreates/hyperschedule
 [jq]: https://stedolan.github.io/jq/
