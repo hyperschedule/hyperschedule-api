@@ -334,25 +334,23 @@ def process_course(raw_course):
     # First half-semester courses start (spring) January 1 through
     # January 31 or (fall) July 15 through September 15. (For some
     # reason, MATH 30B in Fall 2017 is listed as starting August 8.)
-    first_half = (datetime.date(begin_date.year, 1, 1) <
-                  begin_date <
-                  datetime.date(begin_date.year, 1, 31)
-                  or
-                  datetime.date(begin_date.year, 7, 15) <
-                  begin_date <
-                  datetime.date(begin_date.year, 9, 15))
+    first_half = (datetime.date(begin_date.year, 1, 1)
+                  < begin_date
+                  < datetime.date(begin_date.year, 1, 31)
+                  or datetime.date(begin_date.year, 7, 15)
+                  < begin_date
+                  < datetime.date(begin_date.year, 9, 15))
     # Second half-semester courses for the spring end May 1 through
     # May 31, but there's also frosh chem pt.II which just *has* to be
     # different by ending 2/3 of the way through the semester. So we
     # also count that by allowing April 1 through April 30. Sigh. Fall
     # courses end December 1 through December 31.
-    second_half = (datetime.date(end_date.year, 4, 1) <
-                   end_date <
-                   datetime.date(end_date.year, 5, 31)
-                   or
-                   datetime.date(end_date.year, 12, 1) <
-                   end_date <
-                   datetime.date(end_date.year, 12, 31))
+    second_half = (datetime.date(end_date.year, 4, 1)
+                   < end_date
+                   < datetime.date(end_date.year, 5, 31)
+                   or datetime.date(end_date.year, 12, 1)
+                   < end_date
+                   < datetime.date(end_date.year, 12, 31))
     if not (first_half or second_half):
         raise ScrapeError("weird date range {}-{}"
                           .format(begin_date.strftime("%Y-%m-%d"),
@@ -384,7 +382,7 @@ def get_latest_course_list(browser):
     for raw_course in raw_courses:
         try:
             courses.append(process_course(raw_course))
-        except ScrapeError as e:
+        except ScrapeError:
             malformed_courses.append(format_raw_course(raw_course))
     courses.sort(key=course_sort_key)
     return courses, malformed_courses
@@ -631,8 +629,8 @@ class HTTPHandler(http.server.BaseHTTPRequestHandler):
                                  .format(repr(match.group(1)))))
                     return
                 timestamp = course_data["timestamp"]
-                if ((course_data["current"] and
-                     since >= course_data["initial_timestamp"])):
+                if ((course_data["current"]
+                     and since >= course_data["initial_timestamp"])):
                     diff = compute_diff(since)
                     response = {
                         "incremental": True,
@@ -689,8 +687,8 @@ class HTTPHandler(http.server.BaseHTTPRequestHandler):
             return
         match = re.match(r"/debug/set-courses(?:/([-0-9]+))?/?", self.path)
         if match:
-            timestamp = int(match.group(1) or
-                            datetime.datetime.now().timestamp())
+            timestamp = int(match.group(1)
+                            or datetime.datetime.now().timestamp())
             content_length = int(
                 self.headers.get("Content-Length", 0))
             courses = json.loads(self.rfile.read(content_length).decode())

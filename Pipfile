@@ -1,21 +1,17 @@
 [[source]]
-
-name = "pypi"
-url = "https://pypi.python.org/simple"
+url = "https://pypi.org/simple"
 verify_ssl = true
-
-[requires]
-
-python_full_version = "3.7.0"
+name = "pypi"
 
 [packages]
-
 "beautifulsoup4" = "*"
 lxml = "*"
 natural = "*"
 python-dateutil = "*"
-# Pin selenium to work around
-# https://github.com/SeleniumHQ/selenium/issues/5296.
-selenium = "==3.8.0"
+selenium = "*"
 
 [dev-packages]
+"flake8" = "*"
+
+[requires]
+python_version = "3"
