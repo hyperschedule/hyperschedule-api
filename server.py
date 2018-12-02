@@ -262,10 +262,6 @@ def process_course(raw_course):
         if not match:
             raise ScrapeError("malformed schedule slot: {}".format(repr(slot)))
         days, start, end, location = match.groups()
-        for day in days:
-            if day not in DAYS_OF_WEEK:
-                raise ScrapeError("unknown day of week {} in schedule slot {}"
-                                  .format(repr(day), repr(slot)))
         days = "".join(
             sorted(set(days), key=lambda day: DAYS_OF_WEEK.index(day)))
         if not (start.endswith("AM") or start.endswith("PM")):
