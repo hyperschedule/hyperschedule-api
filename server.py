@@ -1,22 +1,25 @@
 #!/usr/bin/env python3
 
 import bs4
+import dateutil.parser
+import natural.date
+import selenium.webdriver
+import selenium.webdriver.chrome.options
+import selenium.webdriver.support.ui
+
+import collections
 import copy
 import datetime
-import dateutil.parser
 import http
 import http.server
 import itertools
 import json
 import json.decoder
 import multiprocessing
-import natural.date
 import os
 import queue
 import re
-import selenium.webdriver
-import selenium.webdriver.chrome.options
-import selenium.webdriver.support.ui
+import string
 import sys
 import threading
 import traceback
@@ -398,7 +401,34 @@ def format_course_code(course):
         course["school"],
         course["section"])
 
+def deduplicate_course_keys(courses):
+    """
+    Given a list of parsed course objects, deduplicate keys. This
+    means that course objects are modified in-place so that no two
+    course objects will have equal keys (see `format_course_code`).
+    The modification is to assign each "duplicate" course with a
+    suffix letter A, B, C, etc. If any of the problematic courses
+    already have suffixes, then abort with ScrapeError.
+
+    This function is unfortunately necessary because Portal sometimes
+    (as of March 2019) includes multiple courses with identical course
+    codes (I'm looking at you, PSYC131 JT-01).
+    """
+    course_index = collections.defaultdict(list)
+    for course in courses:
+        course_index[course_to_index_key(course)].append(course)
+    for key, courses in course_index.items():
+        if len(courses) > 1:
+            for course in courses:
+                if course["courseCodeSuffix"]:
+                    raise ScrapeError(
+                        "duplicate course with suffix: {}"
+                        .format(repr(format_course_code(course))))
+            for course, letter in zip(courses, string.ascii_uppercase):
+                course["courseCodeSuffix"] = letter
+
 def index_courses(courses):
+    deduplicate_course_keys(courses)
     course_index = {}
     for course in courses:
         key = course_to_index_key(course)
