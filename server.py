@@ -441,11 +441,11 @@ def main():
     if args.scrape:
         backoff_factor = 1.5 if args.production else 1.0
         base_delay = 5
-        t = threading.Thread(
+        thread = threading.Thread(
             target=lambda: run_fetch_task(
                 args.headless, backoff_factor, base_delay, args.cache),
             daemon=True)
-        t.start()
+        thread.start()
     httpd = HTTPServer({
         "debug": not args.production,
         "headless": args.headless,
