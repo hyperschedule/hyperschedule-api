@@ -165,6 +165,10 @@ arguments:
 * `--[no-]scrape`: Run the web scraper, not just the server. Defaults
   to `--scrape`. Disable it and use the debug endpoints if you wish to
   test the incremental update logic.
+* `--[no-]snitch`: Update [Dead Man's Snitch][dms] on successful
+  course data update. This allows for notification on failure to
+  update. Defaults to `--no-snitch`. Should be enabled only during
+  deployment.
 
 You may wish to restart the server automatically when the code is
 changed (this works especially well with `--cache`). Install
@@ -225,6 +229,7 @@ Please do! Refer to the [contributor guidelines][contributing] first.
 [contributing]: CONTRIBUTING.md
 
 [chromedriver]: http://chromedriver.chromium.org/
+[dms]: https://deadmanssnitch.com/
 [frontend]: https://github.com/MuddCreates/hyperschedule
 [jq]: https://stedolan.github.io/jq/
 [httpie]: https://httpie.org/

@@ -8,6 +8,7 @@ name = "pypi"
 lxml = "*"
 python-dateutil = "*"
 selenium = "*"
+requests = {extras = ["security"],version = "*"}
 
 [dev-packages]
 "flake8" = "*"

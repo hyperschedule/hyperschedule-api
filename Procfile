@@ -1,1 +1,1 @@
-web: ./server.py --production
+web: ./server.py --production --snitch

@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import requests
+
 import argparse
 import collections
 import copy
@@ -213,7 +215,7 @@ def write_course_data_to_cache_file():
 COURSE_DATA_CACHE_FILE = os.path.join(
     os.path.dirname(__file__), "course-data.json")
 
-def run_single_fetch_task(headless, use_cache):
+def run_single_fetch_task(headless, use_cache, use_snitch):
     try:
         log("Starting course data update...")
         fetch_and_update_course_data(headless)
@@ -225,12 +227,20 @@ def run_single_fetch_task(headless, use_cache):
         return False
     else:
         log("Finished course data update.")
+        if use_snitch:
+            log("Updating Dead Man's Snitch...")
+            # Let the NSA know we finished updating the course data.
+            # Radon will get an email if this code doesn't get run for
+            # more than an hour.
+            resp = requests.get("https://nosnch.in/f08b6b7be5")
+            log("Finished updating Dead Man's Snitch {}".format(resp))
         return True
 
 def run_fetch_task(
-        headless, backoff_factor, base_delay, use_cache, delay=None):
+        headless, backoff_factor, base_delay,
+        use_cache, use_snitch, delay=None):
     delay = delay or base_delay
-    if run_single_fetch_task(headless, use_cache):
+    if run_single_fetch_task(headless, use_cache, use_snitch):
         delay = base_delay
         log("Updating again after {:.0f} seconds.".format(delay))
     else:
@@ -238,7 +248,8 @@ def run_fetch_task(
         log("Trying again after {:.0f} seconds.".format(delay))
     t = threading.Timer(
         delay, lambda: run_fetch_task(
-            headless, backoff_factor, base_delay, use_cache, delay))
+            headless, backoff_factor, base_delay,
+            use_cache, use_snitch, delay))
     t.start()
 
 ## Server
@@ -425,6 +436,7 @@ def main():
     util.add_boolean_arg(parser, "headless", default=True)
     util.add_boolean_arg(parser, "cache", default=None)
     util.add_boolean_arg(parser, "scrape", default=True)
+    util.add_boolean_arg(parser, "snitch", default=False)
     args = parser.parse_args()
     if args.cache is None:
         args.cache = not args.production
@@ -443,7 +455,8 @@ def main():
         base_delay = 5
         thread = threading.Thread(
             target=lambda: run_fetch_task(
-                args.headless, backoff_factor, base_delay, args.cache),
+                args.headless, backoff_factor, base_delay,
+                args.cache, args.snitch),
             daemon=True)
         thread.start()
     httpd = HTTPServer({
