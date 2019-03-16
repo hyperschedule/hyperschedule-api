@@ -426,10 +426,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
     if args.cache is None:
         args.cache = not args.production
-    production = None
-    headless = None
-    use_cache = None
-    use_scraper = None
     if args.cache:
         try:
             with open(COURSE_DATA_CACHE_FILE) as f:
@@ -441,7 +437,7 @@ if __name__ == "__main__":
         except json.decoder.JSONDecodeError:
             log("Failed to load cached course data due to JSON parse error.")
     if args.scrape:
-        backoff_factor = 1.5 if production else 1.0
+        backoff_factor = 1.5 if args.production else 1.0
         base_delay = 5
         t = threading.Thread(
             target=lambda: run_fetch_task(
