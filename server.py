@@ -27,10 +27,11 @@ DIR = pathlib.Path(__file__).resolve().parent
 
 ## Logging
 
+def format_timestamp():
+    return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
 def log(message):
-    print("[{}] {}".format(
-        datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        message), file=sys.stderr)
+    print("[{}] {}".format(format_timestamp(), message), file=sys.stderr)
 
 def die(message):
     log("fatal: " + message)
