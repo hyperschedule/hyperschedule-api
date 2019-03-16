@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-import natural.date
-
 import argparse
 import collections
 import copy
@@ -275,32 +273,18 @@ class HTTPHandler(http.server.BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(html)
             return
-        match = re.match(r"/api/v([12])/all-courses/?", self.path)
+        match = re.match(r"/api/v2/all-courses/?", self.path)
         if match:
             with thread_lock:
                 if course_data["current"]:
                     courses = course_data["current"]
                     timestamp = course_data["timestamp"]
-                    if match.group(1) == "1":
-                        # Paranoid backwards compatibility for the
-                        # output format of the old API.
-                        now = int(datetime.datetime.now().timestamp())
-                        last_updated = natural.date.delta(
-                            timestamp, now,
-                            justnow=datetime.timedelta(seconds=45))[0]
-                        if last_updated != "just now":
-                            last_updated += " ago"
-                        response = {
-                            "courses": courses,
-                            "lastUpdate": last_updated,
-                        }
-                    else:
-                        response = {
-                            "courses": courses,
-                            "timestamp": timestamp,
-                            "malformedCourseCount":
-                            len(course_data["malformed"]),
-                        }
+                    response = {
+                        "courses": courses,
+                        "timestamp": timestamp,
+                        "malformedCourseCount":
+                        len(course_data["malformed"]),
+                    }
                     response_body = json.dumps(response).encode()
                     self.send_response(http.HTTPStatus.OK)
                     self.send_header("Content-Type", "application/json")

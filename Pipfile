@@ -6,7 +6,6 @@ name = "pypi"
 [packages]
 "beautifulsoup4" = "*"
 lxml = "*"
-natural = "*"
 python-dateutil = "*"
 selenium = "*"
 
