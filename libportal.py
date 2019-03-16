@@ -1,19 +1,35 @@
+"""
+Module for performing a webscrape of the HMC Portal. Main entry
+point is get_latest_course_list.
+
+This module uses two representations of courses, raw and canonical.
+The raw version is taken more or less directly from the HTML on
+Portal, and hasn't been validated yet. The canonical version is fully
+validated and conforms to the API spec.
+
+Just to avoid getting them confused, the raw representation uses
+snake_case keys while the canonical representation uses camelCase
+keys.
+"""
+
+import datetime
+import os
+import re
+
 import bs4
 import dateutil.parser
 import selenium.webdriver
 import selenium.webdriver.chrome.options
 import selenium.webdriver.support.ui
 
-import datetime
-import os
-import re
-
 import libcourse
-import util
 
 from util import ScrapeError
 
 def unique_preserve_order(lst):
+    """
+    Deduplicate lst without changing the order. Return a new list.
+    """
     new_lst = []
     for item in lst:
         if item not in new_lst:
@@ -21,6 +37,10 @@ def unique_preserve_order(lst):
     return new_lst
 
 def get_browser(headless):
+    """
+    Return a Selenium browser object, which can be either headless or
+    not.
+    """
     if headless:
         options = selenium.webdriver.chrome.options.Options()
         options.set_headless(True)
@@ -35,10 +55,14 @@ def get_browser(headless):
         if binary:
             options.binary_location = binary
         return selenium.webdriver.Chrome(chrome_options=options)
-    else:
-        return selenium.webdriver.Chrome()
+    return selenium.webdriver.Chrome()
 
 def get_portal_html(browser):
+    """
+    Given a Selenium browser object, perform a webscrape of Portal and
+    return the HTML of the course search results page as a string. May
+    raise ScrapeError.
+    """
     url = ("https://portal.hmc.edu/ICS/Portal_Homepage.jnz?"
            "portlet=Course_Schedules&screen=Advanced+Course+Search"
            "&screenType=next")
@@ -75,7 +99,37 @@ def get_portal_html(browser):
 
     return browser.page_source
 
+def parse_table_row(row_idx, row):
+    """
+    Given a Selenium table row and the index, return a dictionary
+    representing the raw course data for that row, or raise
+    ScrapeError.
+    """
+    elements = row.find_all("td")
+    try:
+        (_add, course_code, name, faculty,
+         seats, status, schedule, num_credits, begin, end) = elements
+    except ValueError:
+        raise ScrapeError(
+            "could not extract course list table row elements "
+            "from Portal HTML (for row {})".format(row_idx))
+    return {
+        "course_code": course_code.text,
+        "course_name": name.text,
+        "faculty": faculty.text,
+        "seats": seats.text,
+        "status": status.text,
+        "schedule": [stime.text for stime in schedule.find_all("li")],
+        "credits": num_credits.text,
+        "begin_date": begin.text,
+        "end_date": end.text,
+    }
+
 def parse_portal_html(html):
+    """
+    Given the Portal search results HTML as a string, return a list of
+    raw course data dictionaries or raise ScrapeError.
+    """
     soup = bs4.BeautifulSoup(html, "lxml")
 
     table = soup.find(id="pg0_V_dgCourses")
@@ -96,29 +150,15 @@ def parse_portal_html(html):
     for row_idx, row in enumerate(table_rows):
         if "style" in row.attrs and row.attrs["style"] == "display:none;":
             continue
-        elements = row.find_all("td")
-        try:
-            (add, course_code, name, faculty,
-             seats, status, schedule, num_credits, begin, end) = elements
-        except ValueError:
-            raise ScrapeError(
-                "could not extract course list table row elements "
-                "from Portal HTML (for row {})".format(row_idx))
-        raw_courses.append({
-            "course_code": course_code.text,
-            "course_name": name.text,
-            "faculty": faculty.text,
-            "seats": seats.text,
-            "status": status.text,
-            "schedule": [stime.text for stime in schedule.find_all("li")],
-            "credits": num_credits.text,
-            "begin_date": begin.text,
-            "end_date": end.text,
-        })
+        raw_courses.append(parse_table_row(row_idx, row))
 
     return raw_courses
 
 def format_raw_course(raw_course):
+    """
+    Given a raw course dictionary, return a string that can be output
+    to the user in error messages.
+    """
     # Try to put together a reasonable string representation of the
     # course for use in error messages, if it is malformed.
     desc = "{} {}".format(raw_course["course_code"], raw_course["course_name"])
@@ -129,7 +169,13 @@ SCHEDULE_REGEX = (r"([MTWRFSU]+)\xa0([0-9]+:[0-9]+(?: ?[AP]M)?) - "
                   "([0-9]+:[0-9]+ ?[AP]M); ([A-Za-z0-9, ]+)")
 DAYS_OF_WEEK = "MTWRFSU"
 
+# pylint: disable = R0912, R0914, R0915
+# noqa: C901
 def process_course(raw_course):
+    """
+    Turn a raw course object into a canonical course object.
+    """
+    # noqa
     course_code = raw_course["course_code"].strip()
     match = re.match(COURSE_REGEX, course_code)
     if not match:
@@ -198,7 +244,7 @@ def process_course(raw_course):
                 raise ScrapeError("unknown day of week {} in schedule slot {}"
                                   .format(repr(day), repr(slot)))
         days = "".join(
-            sorted(set(days), key=lambda day: DAYS_OF_WEEK.index(day)))
+            sorted(set(days), key=DAYS_OF_WEEK.index))
         if not days:
             raise ScrapeError("no days in schedule slot {}".format(repr(slot)))
         if not (start.endswith("AM") or start.endswith("PM")):
@@ -277,6 +323,13 @@ def process_course(raw_course):
     }
 
 def get_latest_course_list(headless):
+    """
+    Given a boolean indicating whether the Selenium browser should be
+    headless, return a 2-tuple. The first element is a list of
+    canonical course objects and the second element is a list of names
+    of malformed courses. (You should not rely on the format of these
+    names.)
+    """
     browser = get_browser(headless)
     html = get_portal_html(browser)
     raw_courses = parse_portal_html(html)
