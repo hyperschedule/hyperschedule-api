@@ -43,7 +43,7 @@ def get_browser(headless):
     """
     if headless:
         options = selenium.webdriver.chrome.options.Options()
-        options.set_headless(True)
+        options.headless = True
         # Disabling scroll bars is important, see
         # https://bugs.chromium.org/p/chromedriver/issues/detail?id=2487.
         options.add_argument("--hide-scrollbars")
@@ -54,7 +54,7 @@ def get_browser(headless):
         binary = os.environ.get("GOOGLE_CHROME_SHIM")
         if binary:
             options.binary_location = binary
-        return selenium.webdriver.Chrome(chrome_options=options)
+        return selenium.webdriver.Chrome(options=options)
     return selenium.webdriver.Chrome()
 
 def get_portal_html(browser):
