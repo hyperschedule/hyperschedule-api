@@ -9,6 +9,9 @@ import os
 import re
 
 import libcourse
+import util
+
+from util import ScrapeError
 
 def unique_preserve_order(lst):
     new_lst = []
@@ -16,9 +19,6 @@ def unique_preserve_order(lst):
         if item not in new_lst:
             new_lst.append(item)
     return new_lst
-
-class ScrapeError(Exception):
-    pass
 
 def get_browser(headless):
     if headless:

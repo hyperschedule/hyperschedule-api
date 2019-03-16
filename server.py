@@ -2,6 +2,7 @@
 
 import natural.date
 
+import argparse
 import collections
 import copy
 import datetime
@@ -12,7 +13,6 @@ import json
 import json.decoder
 import os
 import pathlib
-import queue
 import re
 import string
 import subprocess
@@ -21,6 +21,9 @@ import threading
 import traceback
 
 import libcourse
+import util
+
+from util import ScrapeError
 
 DIR = pathlib.Path(__file__).resolve().parent
 
@@ -150,7 +153,7 @@ def compute_diff(since):
         added_courses.append(index[key])
     removed_courses = []
     for key in removed:
-        removed_courses.append(course_from_index_key(key))
+        removed_courses.append(libcourse.course_from_index_key(key))
     modified_courses = []
     for key in modified:
         current_course = index[key]
@@ -225,7 +228,8 @@ def run_single_fetch_task(headless, use_cache):
         log("Finished course data update.")
         return True
 
-def run_fetch_task(headless, backoff_factor, base_delay, use_cache, delay=None):
+def run_fetch_task(
+        headless, backoff_factor, base_delay, use_cache, delay=None):
     delay = delay or base_delay
     if run_single_fetch_task(headless, use_cache):
         delay = base_delay
@@ -427,38 +431,22 @@ if __name__ == "__main__":
         port = int(port)
     except ValueError:
         die("malformed PORT: {}".format(repr(port)))
+    parser = argparse.ArgumentParser()
+    util.add_boolean_arg(
+        parser, "production",
+        yes_args=["--prod", "--production"],
+        no_args=["--dev", "--develop", "--development"])
+    util.add_boolean_arg(parser, "headless", default=True)
+    util.add_boolean_arg(parser, "cache", default=None)
+    util.add_boolean_arg(parser, "scrape", default=True)
+    args = parser.parse_args()
+    if args.cache is None:
+        args.cache = not args.production
     production = None
     headless = None
     use_cache = None
     use_scraper = None
-    for arg in sys.argv[1:]:
-        if arg in ("--dev", "--develop", "--development"):
-            production = False
-        elif arg in ("--prod", "--production"):
-            production = True
-        elif arg in ("--headless"):
-            headless = True
-        elif arg in ("--no-headless"):
-            headless = False
-        elif arg in ("--cache"):
-            use_cache = True
-        elif arg in ("--no-cache"):
-            use_cache = False
-        elif arg in ("--scrape"):
-            use_scraper = True
-        elif arg in ("--no-scrape"):
-            use_scraper = False
-        else:
-            die("unexpected argument: {}".format(repr(arg)))
-    if production is None:
-        die("you must specify either --dev or --prod")
-    if headless is None:
-        headless = True
-    if use_cache is None:
-        use_cache = not production
-    if use_scraper is None:
-        use_scraper = True
-    if use_cache:
+    if args.cache:
         try:
             with open(COURSE_DATA_CACHE_FILE) as f:
                 log("Loading cached course data from disk...")
@@ -468,17 +456,18 @@ if __name__ == "__main__":
             pass
         except json.decoder.JSONDecodeError:
             log("Failed to load cached course data due to JSON parse error.")
-    if use_scraper:
+    if args.scrape:
         backoff_factor = 1.5 if production else 1.0
         base_delay = 5
         t = threading.Thread(
             target=lambda: run_fetch_task(
-                headless, backoff_factor, base_delay, use_cache), daemon=True)
+                args.headless, backoff_factor, base_delay, args.cache),
+            daemon=True)
         t.start()
     httpd = HTTPServer({
-        "debug": not production,
-        "headless": headless,
-        "use_cache": use_cache,
+        "debug": not args.production,
+        "headless": args.headless,
+        "use_cache": args.cache,
     }, ("", port), HTTPHandler)
     log("Starting server on port {}...".format(port))
     httpd.serve_forever()
