@@ -409,7 +409,8 @@ class HTTPHandler(http.server.BaseHTTPRequestHandler):
 
     error_message_format = ERROR_MESSAGE_FORMAT
 
-if __name__ == "__main__":
+def main():
+    global course_data
     port = os.environ.get("PORT", "3000")
     try:
         port = int(port)
@@ -451,6 +452,9 @@ if __name__ == "__main__":
     }, ("", port), HTTPHandler)
     log("Starting server on port {}...".format(port))
     httpd.serve_forever()
+
+if __name__ == "__main__":
+    main()
 
 # Local Variables:
 # outline-regexp: "^##+"
