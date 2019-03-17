@@ -215,7 +215,10 @@ def write_course_data_to_cache_file():
 COURSE_DATA_CACHE_FILE = os.path.join(
     os.path.dirname(__file__), "course-data.json")
 
+last_dms_update = None
+
 def run_single_fetch_task(headless, use_cache, use_snitch):
+    global last_dms_update
     try:
         log("Starting course data update...")
         fetch_and_update_course_data(headless)
@@ -227,12 +230,19 @@ def run_single_fetch_task(headless, use_cache, use_snitch):
         return False
     else:
         log("Finished course data update.")
-        if use_snitch:
+        if last_dms_update:
+            now = datetime.datetime.now()
+            delta = last_dms_update - now
+            long_enough = delta > datetime.timedelta(minutes=5)
+        else:
+            long_enough = True
+        if use_snitch and long_enough:
             log("Updating Dead Man's Snitch...")
             # Let the NSA know we finished updating the course data.
             # Radon will get an email if this code doesn't get run for
             # more than an hour.
             resp = requests.get("https://nosnch.in/f08b6b7be5")
+            last_dms_update = datetime.datetime.now()
             log("Finished updating Dead Man's Snitch {}".format(resp))
         return True
 
