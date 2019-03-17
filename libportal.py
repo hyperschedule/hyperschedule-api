@@ -170,7 +170,6 @@ SCHEDULE_REGEX = (r"([MTWRFSU]+)\xa0([0-9]+:[0-9]+(?: ?[AP]M)?) - "
 DAYS_OF_WEEK = "MTWRFSU"
 
 # pylint: disable = R0912, R0914, R0915
-# noqa: C901
 def process_course(raw_course):
     """
     Turn a raw course object into a canonical course object.
