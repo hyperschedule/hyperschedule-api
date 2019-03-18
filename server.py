@@ -232,7 +232,7 @@ def run_single_fetch_task(headless, use_cache, use_snitch):
         log("Finished course data update.")
         if last_dms_update:
             now = datetime.datetime.now()
-            delta = last_dms_update - now
+            delta = now - last_dms_update
             long_enough = delta > datetime.timedelta(minutes=5)
         else:
             long_enough = True
