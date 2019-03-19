@@ -1,1 +1,1 @@
-web: ./server.py --production --snitch
+web: ./server.py --production --snitch --kill-chrome

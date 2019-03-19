@@ -18,6 +18,7 @@ import re
 
 import bs4
 import dateutil.parser
+import psutil
 import selenium.webdriver
 import selenium.webdriver.chrome.options
 import selenium.webdriver.support.ui
@@ -35,6 +36,18 @@ def unique_preserve_order(lst):
         if item not in new_lst:
             new_lst.append(item)
     return new_lst
+
+def kill_existing_browser():
+    """
+    Kill any existing Google Chrome processes. This is necessary
+    because Selenium is happy to start the browser, but it doesn't
+    take care to clean it up if we kill Python -- thus resulting in
+    multiple instances of Chrome, and way too much memory usage on
+    Heroku.
+    """
+    for proc in psutil.process_iter():
+        if proc.name() == "Google Chrome":
+            proc.kill()
 
 def get_browser(headless):
     """
@@ -321,7 +334,7 @@ def process_course(raw_course):
         "endDate": end_date.strftime("%Y-%m-%d"),
     }
 
-def get_latest_course_list(headless):
+def get_latest_course_list(config):
     """
     Given a boolean indicating whether the Selenium browser should be
     headless, return a 2-tuple. The first element is a list of
@@ -329,7 +342,9 @@ def get_latest_course_list(headless):
     of malformed courses. (You should not rely on the format of these
     names.)
     """
-    browser = get_browser(headless)
+    if config["kill_chrome"]:
+        kill_existing_browser()
+    browser = get_browser(config["headless"])
     html = get_portal_html(browser)
     raw_courses = parse_portal_html(html)
     courses = []

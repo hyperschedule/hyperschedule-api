@@ -169,6 +169,12 @@ arguments:
   course data update. This allows for notification on failure to
   update. Defaults to `--no-snitch`. Should be enabled only during
   deployment.
+* `--[no-]kill-chrome`: Kill extant Google Chrome processes when
+  starting a webscrape. This prevents them from building up if
+  Selenium hangs and we have to kill the running script (which
+  prevents Selenium from cleaning up properly, apparently). Defaults
+  to `--no-kill-chrome` to save your web browser, but should be
+  enabled during deployment.
 
 You may wish to restart the server automatically when the code is
 changed (this works especially well with `--cache`). Install

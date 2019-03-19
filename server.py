@@ -188,9 +188,12 @@ def update_course_data(timestamp, courses, index, malformed_courses):
         course_data["timestamp"] = timestamp
         course_data["malformed"] = malformed_courses
 
-def fetch_and_update_course_data(headless):
+def fetch_and_update_course_data(config):
     timestamp = int(datetime.datetime.now().timestamp())
-    args = ["--headless" if headless else "--no-headless"]
+    args = []
+    args.append("--headless" if config["headless"] else "--no-headless")
+    args.append(
+        "--kill-chrome" if config["kill_chrome"] else "--no-kill-chrome")
     process = subprocess.Popen(
         [DIR / "run_portal_scrape.py", *args], stdout=subprocess.PIPE)
     try:
@@ -217,12 +220,12 @@ COURSE_DATA_CACHE_FILE = os.path.join(
 
 last_dms_update = None
 
-def run_single_fetch_task(headless, use_cache, use_snitch):
+def run_single_fetch_task(config):
     global last_dms_update
     try:
         log("Starting course data update...")
-        fetch_and_update_course_data(headless)
-        if use_cache:
+        fetch_and_update_course_data(config)
+        if config["use_cache"]:
             write_course_data_to_cache_file()
     except Exception:
         log("Failed to update course data:\n"
@@ -236,7 +239,7 @@ def run_single_fetch_task(headless, use_cache, use_snitch):
             long_enough = delta > datetime.timedelta(minutes=5)
         else:
             long_enough = True
-        if use_snitch and long_enough:
+        if config["use_snitch"] and long_enough:
             log("Updating Dead Man's Snitch...")
             # Let the NSA know we finished updating the course data.
             # Radon will get an email if this code doesn't get run for
@@ -246,20 +249,15 @@ def run_single_fetch_task(headless, use_cache, use_snitch):
             log("Finished updating Dead Man's Snitch {}".format(resp))
         return True
 
-def run_fetch_task(
-        headless, backoff_factor, base_delay,
-        use_cache, use_snitch, delay=None):
-    delay = delay or base_delay
-    if run_single_fetch_task(headless, use_cache, use_snitch):
-        delay = base_delay
+def run_fetch_task(config, delay=None):
+    delay = delay or config["base_delay"]
+    if run_single_fetch_task(config):
+        delay = config["base_delay"]
         log("Updating again after {:.0f} seconds.".format(delay))
     else:
-        delay *= backoff_factor
+        delay *= config["backoff_factor"]
         log("Trying again after {:.0f} seconds.".format(delay))
-    t = threading.Timer(
-        delay, lambda: run_fetch_task(
-            headless, backoff_factor, base_delay,
-            use_cache, use_snitch, delay))
+    t = threading.Timer(delay, lambda: run_fetch_task(config, delay))
     t.start()
 
 ## Server
@@ -447,6 +445,7 @@ def main():
     util.add_boolean_arg(parser, "cache", default=None)
     util.add_boolean_arg(parser, "scrape", default=True)
     util.add_boolean_arg(parser, "snitch", default=False)
+    util.add_boolean_arg(parser, "kill-chrome", default=False)
     args = parser.parse_args()
     if args.cache is None:
         args.cache = not args.production
@@ -464,10 +463,14 @@ def main():
         backoff_factor = 1.5 if args.production else 1.0
         base_delay = 5
         thread = threading.Thread(
-            target=lambda: run_fetch_task(
-                args.headless, backoff_factor, base_delay,
-                args.cache, args.snitch),
-            daemon=True)
+            target=lambda: run_fetch_task({
+                "backoff_factor": backoff_factor,
+                "base_delay": base_delay,
+                "use_cache": args.cache,
+                "use_snitch": args.snitch,
+                "kill_chrome": args.kill_chrome,
+                "headless": args.headless,
+            }), daemon=True)
         thread.start()
     httpd = HTTPServer({
         "debug": not args.production,

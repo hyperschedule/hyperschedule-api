@@ -9,6 +9,7 @@ lxml = "*"
 python-dateutil = "*"
 selenium = "*"
 requests = {extras = ["security"],version = "*"}
+psutil = "*"
 
 [dev-packages]
 "flake8" = "*"
