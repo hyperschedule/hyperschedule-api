@@ -188,7 +188,7 @@ def fetch_and_update_course_data(config):
     except subprocess.TimeoutExpired:
         process.kill()
         output = process.communicate()
-        print(output, end="")
+        print(output[0].decode(errors="backslashreplace"), end="")
         raise ScrapeError("timed out")
     if process.returncode != 0:
         raise ScrapeError("error in portal scraper")
