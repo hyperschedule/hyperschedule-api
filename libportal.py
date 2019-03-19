@@ -25,7 +25,7 @@ import selenium.webdriver.support.ui
 
 import libcourse
 
-from util import ScrapeError
+from util import ScrapeError, log
 
 def unique_preserve_order(lst):
     """
@@ -46,7 +46,13 @@ def kill_existing_browser():
     Heroku.
     """
     for proc in psutil.process_iter():
-        if proc.name() == "Google Chrome":
+        # We have to kill the helpers, too -- on Heroku we are using
+        # Docker without baseimage-docker and thus zombie children
+        # don't get reaped correctly; see
+        # <https://blog.phusion.nl/2015/01/20/docker-and-the-pid-1-zombie-reaping-problem/>.
+        if proc.name() in (
+                "chromedriver", "Google Chrome", "Google Chrome Helper"):
+            log("Killing {} process {}".format(repr(proc.name()), proc.pid))
             proc.kill()
 
 def get_browser(headless):
