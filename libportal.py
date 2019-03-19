@@ -50,8 +50,7 @@ def kill_existing_browser():
         # Docker without baseimage-docker and thus zombie children
         # don't get reaped correctly; see
         # <https://blog.phusion.nl/2015/01/20/docker-and-the-pid-1-zombie-reaping-problem/>.
-        if proc.name() in (
-                "chromedriver", "Google Chrome", "Google Chrome Helper"):
+        if re.match(r"chrome", proc.name(), re.IGNORECASE):
             log("Killing {} process {}".format(repr(proc.name()), proc.pid))
             proc.kill()
 
