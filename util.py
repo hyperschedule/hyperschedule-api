@@ -2,10 +2,33 @@
 Utility module shared by libcourse, libportal, and server.
 """
 
+import datetime
+import sys
+
 class ScrapeError(Exception):
     """
     Exception indicating something went wrong with webscraping.
     """
+
+def format_timestamp():
+    """
+    Return a string representing the current date and time.
+    """
+    return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+def log(message):
+    """
+    Log a message to stderr with the current timestamp.
+    """
+    print("[{}] {}".format(format_timestamp(), message), file=sys.stderr)
+
+def die(message):
+    """
+    Log a message to stderr with the current timestamp, and then exit
+    the process reporting failure.
+    """
+    log("fatal: " + message)
+    sys.exit(1)
 
 NO_DEFAULT = object()
 
