@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-import requests
-
 import argparse
 import collections
 import copy
@@ -19,6 +17,8 @@ import subprocess
 import sys
 import threading
 import traceback
+
+import requests
 
 import libcourse
 import util
