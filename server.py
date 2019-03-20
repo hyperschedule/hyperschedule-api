@@ -236,16 +236,14 @@ def run_single_fetch_task(config):
             log("Finished updating Dead Man's Snitch {}".format(resp))
         return True
 
-def run_fetch_task(config, delay=None):
-    delay = delay or config["base_delay"]
+def run_fetch_task(config):
+    delay = config["delay"]
     if run_single_fetch_task(config):
-        delay = config["base_delay"]
         log("Updating again after {:.0f} seconds.".format(delay))
     else:
-        delay *= config["backoff_factor"]
         log("Trying again after {:.0f} seconds.".format(delay))
-    t = threading.Timer(delay, lambda: run_fetch_task(config, delay))
-    t.start()
+    thread = threading.Timer(delay, lambda: run_fetch_task(config))
+    thread.start()
 
 ## Server
 
@@ -346,11 +344,17 @@ class HTTPHandler(http.server.BaseHTTPRequestHandler):
         match = re.match(r"/api/v2/malformed-courses/?", self.path)
         if match:
             with thread_lock:
-                response_body = json.dumps(course_data["malformed"]).encode()
-            self.send_response(http.HTTPStatus.OK)
-            self.send_header("Content-Type", "application/json")
-            self.end_headers()
-            self.wfile.write(response_body)
+                if course_data["current"]:
+                    response_body = json.dumps(
+                        course_data["malformed"]).encode()
+                    self.send_response(http.HTTPStatus.OK)
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(response_body)
+                else:
+                    self.send_error(http.HTTPStatus.SERVICE_UNAVAILABLE,
+                                    explain=("The course data is not yet "
+                                             "available. Please wait"))
             return
         match = re.match(r"/experimental/course-data/?", self.path)
         if match:
@@ -447,12 +451,9 @@ def main():
         except json.decoder.JSONDecodeError:
             log("Failed to load cached course data due to JSON parse error.")
     if args.scrape:
-        backoff_factor = 1.5 if args.production else 1.0
-        base_delay = 5
         thread = threading.Thread(
             target=lambda: run_fetch_task({
-                "backoff_factor": backoff_factor,
-                "base_delay": base_delay,
+                "delay": 5,
                 "use_cache": args.cache,
                 "use_snitch": args.snitch,
                 "kill_chrome": args.kill_chrome,
