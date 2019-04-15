@@ -200,10 +200,15 @@ def write_course_data_to_cache_file():
     log("Writing course data to cache on disk...")
     with open(COURSE_DATA_CACHE_FILE, "w") as f:
         json.dump(course_data, f)
+    with open(COURSE_DATA_PRETTY_CACHE_FILE, "w") as f:
+        json.dump(course_data, f, indent=2)
     log("Finished writing course data to disk.")
 
 COURSE_DATA_CACHE_FILE = os.path.join(
     os.path.dirname(__file__), "course-data.json")
+
+COURSE_DATA_PRETTY_CACHE_FILE = os.path.join(
+    os.path.dirname(__file__), "course-data-pretty.json")
 
 last_dms_update = None
 
@@ -442,10 +447,10 @@ def main():
         args.cache = not args.production
     if args.cache:
         try:
+            log("Loading cached course data from disk...")
             with open(COURSE_DATA_CACHE_FILE) as f:
-                log("Loading cached course data from disk...")
                 course_data = json.load(f)
-                log("Finished loading cached course data.")
+            log("Finished loading cached course data.")
         except FileNotFoundError:
             pass
         except json.decoder.JSONDecodeError:

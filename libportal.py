@@ -1,5 +1,6 @@
 """
-Module for performing a webscrape of the HMC Portal. Main entry
+Module for performing a webscrape of the HMC Portal (and
+optionally also the Lingk API, via the liblingk module). Main entry
 point is get_latest_course_list.
 
 This module uses two representations of courses, raw and canonical.
@@ -15,6 +16,7 @@ keys.
 import datetime
 import os
 import re
+import traceback
 
 import bs4
 import dateutil.parser
@@ -24,6 +26,7 @@ import selenium.webdriver.chrome.options
 import selenium.webdriver.support.ui
 
 import libcourse
+import liblingk
 
 from util import ScrapeError, log
 
@@ -90,20 +93,25 @@ def get_portal_html(browser):
         browser.find_element_by_id("pg0_V_ddlTerm"))
     term_names = [option.text for option in term_dropdown.options]
 
-    terms = []
+    terms_info = []
     for term_name in term_names:
         match = re.match(r"\s*(FA|SP)\s*([0-9]{4})\s*", term_name)
         if match:
             fall_or_spring, year_str = match.groups()
-            terms.append((int(year_str), fall_or_spring == "FA", term_name))
+            terms_info.append(
+                (int(year_str), fall_or_spring == "FA", term_name))
 
-    if not terms:
+    if not terms_info:
         raise ScrapeError(
             "couldn't parse any term names (from: {})"
             .format(repr(term_names)))
 
-    most_recent_term = max(terms)
-    term_dropdown.select_by_visible_text(most_recent_term[2])
+    term_info = max(terms_info)
+    term_dropdown.select_by_visible_text(term_info[2])
+    term = {
+        "year": term_info[0],
+        "semester": libcourse.FALL if term_info[1] else libcourse.SPRING,
+    }
 
     title_input = browser.find_element_by_id("pg0_V_txtTitleRestrictor")
     title_input.clear()
@@ -115,7 +123,7 @@ def get_portal_html(browser):
     show_all_checkbox = browser.find_element_by_id("pg0_V_lnkShowAll")
     show_all_checkbox.click()
 
-    return browser.page_source
+    return browser.page_source, term
 
 def parse_table_row(row_idx, row):
     """
@@ -182,7 +190,7 @@ def format_raw_course(raw_course):
     desc = "{} {}".format(raw_course["course_code"], raw_course["course_name"])
     return re.sub(r"\s+", " ", desc).strip()
 
-COURSE_REGEX = r"([A-Z]+) *?([0-9]+) *([A-Z]*[0-9]?) *([A-Z]{2})-([0-9]+)"
+COURSE_AND_SECTION_REGEX = r"([^-]+)-([0-9]+)"
 SCHEDULE_REGEX = (r"([MTWRFSU]+)\xa0([0-9]+:[0-9]+(?: ?[AP]M)?) - "
                   "([0-9]+:[0-9]+ ?[AP]M); ([A-Za-z0-9, ]+)")
 DAYS_OF_WEEK = "MTWRFSU"
@@ -192,40 +200,8 @@ def process_course(raw_course):
     """
     Turn a raw course object into a canonical course object.
     """
-    # noqa
     course_code = raw_course["course_code"].strip()
-    match = re.match(COURSE_REGEX, course_code)
-    if not match:
-        raise ScrapeError(
-            "malformed course code: {}".format(repr(course_code)))
-    department, course_number, num_suffix, school, section = match.groups()
-    if not department:
-        raise ScrapeError("empty string for department")
-    if "/" in department:
-        raise ScrapeError("department contains slashes: {}"
-                          .format(repr(department)))
-    try:
-        course_number = int(course_number)
-    except ValueError:
-        raise ScrapeError(
-            "malformed course number: {}".format(repr(course_number)))
-    if course_number <= 0:
-        raise ScrapeError(
-            "non-positive course number: {}".format(course_number))
-    if "/" in num_suffix:
-        raise ScrapeError("course code suffix contains slashes: {}"
-                          .format(repr(num_suffix)))
-    if not school:
-        raise ScrapeError("empty string for school")
-    if "/" in school:
-        raise ScrapeError("school contains slashes: {}".format(repr(school)))
-    try:
-        section = int(section)
-    except ValueError:
-        raise ScrapeError(
-            "malformed section number: {}".format(repr(section)))
-    if section <= 0:
-        raise ScrapeError("non-positive section number: {}".format(section))
+    partial_course = libcourse.parse_claremont_course_code(course_code)
     course_name = raw_course["course_name"].strip()
     if not course_name:
         raise ScrapeError("empty string for course name")
@@ -321,11 +297,6 @@ def process_course(raw_course):
                           .format(begin_date.strftime("%Y-%m-%d"),
                                   end_date.strftime("%Y-%m-%d")))
     return {
-        "department": department,
-        "courseNumber": course_number,
-        "courseCodeSuffix": num_suffix,
-        "school": school,
-        "section": section,
         "courseName": course_name,
         "faculty": faculty,
         "openSeats": open_seats,
@@ -337,6 +308,8 @@ def process_course(raw_course):
         "secondHalfSemester": second_half,
         "startDate": begin_date.strftime("%Y-%m-%d"),
         "endDate": end_date.strftime("%Y-%m-%d"),
+        "courseDescription": None,
+        **partial_course,
     }
 
 def get_latest_course_list(config):
@@ -350,7 +323,7 @@ def get_latest_course_list(config):
     if config["kill_chrome"]:
         kill_existing_browser()
     browser = get_browser(config["headless"])
-    html = get_portal_html(browser)
+    html, term = get_portal_html(browser)
     raw_courses = parse_portal_html(html)
     courses = []
     malformed_courses = []
@@ -360,4 +333,30 @@ def get_latest_course_list(config):
         except ScrapeError:
             malformed_courses.append(format_raw_course(raw_course))
     courses.sort(key=libcourse.course_sort_key)
+    lingk_key = config["lingk_key"]
+    lingk_secret = config["lingk_secret"]
+    if lingk_key and lingk_secret:
+        num_with = 0
+        num_without = 0
+        try:
+            desc_index = liblingk.get_lingk_course_description_index(
+                lingk_key, lingk_secret, term)
+        except ScrapeError as e:
+            log("Failed to scrape Lingk: {}".format(e))
+            traceback.print_exc()
+            return courses, malformed_courses
+        for course in courses:
+            # Adjust the section number to 0, so that we can look up
+            # in the non-standard index format returned by liblingk
+            # (which doesn't care about section numbers).
+            course_copy = dict(course)
+            course_copy["section"] = 0
+            index_key = libcourse.course_to_index_key(course_copy)
+            if index_key in desc_index:
+                course["courseDescription"] = desc_index[index_key]
+                num_with += 1
+            else:
+                num_without += 1
+        log("Added course descriptions to {} out of {} courses"
+            .format(num_with, num_with + num_without))
     return courses, malformed_courses

@@ -80,6 +80,8 @@ The following endpoints are exposed:
 Course objects are maps with the following keys:
 * `courseCodeSuffix`
   * string, possibly empty, not containing any slashes
+* `courseDescription`
+  * string or null
 * `courseName`
   * non-empty string
 * `courseNumber`
@@ -148,10 +150,16 @@ running:
 
     $ pipenv run ./server.py --dev
 
-To run in production mode instead, pass `--prod`. You can change the
-port that the server listens on by exporting the environment variable
-`PORT`. Further configuration may be achieved via command-line
-arguments:
+To scrape the Lingk API (and thereby obtain course descriptions), you
+must acquire a Lingk API key and secret from one of the Hyperschedule
+developers. Exporting the environment variables
+`HYPERSCHEDULE_LINGK_KEY` and `HYPERSCHEDULE_LINGK_SECRET` will cause
+Hyperschedule to fetch and serve course descriptions from Lingk.
+
+To run in production mode instead, pass `--prod` when starting the
+server. You can change the port that the server listens on by
+exporting the environment variable `PORT`. Further configuration may
+be achieved via command-line arguments:
 
 * `--[no-]headless`: Don't spawn a graphical Chrome window for the web
   scraping. Defaults to `--headless`. Change it if you wish to debug
