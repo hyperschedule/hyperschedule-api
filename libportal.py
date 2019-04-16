@@ -320,10 +320,16 @@ def get_latest_course_list(config):
     of malformed courses. (You should not rely on the format of these
     names.)
     """
+    # If we had an old Chrome instance lying around, kill it so we
+    # don't run out of memory starting this one.
     if config["kill_chrome"]:
         kill_existing_browser()
     browser = get_browser(config["headless"])
     html, term = get_portal_html(browser)
+    # Kill the Chrome instance we just started; otherwise we may run
+    # out of memory processing the Lingk data.
+    if config["kill_chrome"]:
+        kill_existing_browser()
     raw_courses = parse_portal_html(html)
     courses = []
     malformed_courses = []
