@@ -21,13 +21,6 @@ The following endpoints are exposed:
 * `/`
   * displays a static HTML page directing the user to copy their
     schedule data and migrate to [hyperschedule.io]
-* `/api/v1/all-courses`
-  * returns a JSON map with the following keys:
-    * `courses`:
-      * non-empty list of distinct course objects (see below)
-    * `lastUpdate`:
-      * non-empty human-readable string describing the time elapsed
-        since the course list was last recomputed on the server
 * `/api/v2/all-courses`
   * returns a JSON map with the following keys:
     * `courses`:
