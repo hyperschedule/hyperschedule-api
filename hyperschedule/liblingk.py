@@ -18,8 +18,8 @@ import urllib.parse
 import requests
 import requests.exceptions
 
-import libcourse
-from util import ScrapeError
+import hyperschedule.libcourse as libcourse
+from hyperschedule.util import ScrapeError
 
 LINGK_ENDPOINT = "/v1/harveymudd/coursecatalog/ps/datasets/coursecatalog"
 LINGK_URL = ("https://www.lingkapis.com{}?limit=1000000000"

@@ -141,7 +141,7 @@ Then, install the Python dependencies into a virtualenv by running:
 You may start the server in development mode on `localhost:3000` by
 running:
 
-    $ pipenv run ./server.py --dev
+    $ pipenv run python -m server --dev
 
 To scrape the Lingk API (and thereby obtain course descriptions), you
 must acquire a Lingk API key and secret from one of the Hyperschedule
@@ -181,7 +181,7 @@ You may wish to restart the server automatically when the code is
 changed (this works especially well with `--cache`). Install
 [`watchexec`][watchexec] and run:
 
-    $ pipenv run watchexec -r -e py "./server.py --dev ..."
+    $ pipenv run watchexec -r -e py "python -m hyperschedule.server --dev ..."
 
 When running in development mode, additional endpoints are available.
 These are especially useful for testing the incremental update logic.
@@ -205,7 +205,7 @@ a one-off scraping operation:
 A good way to test the incremental update logic is to start the server
 with the scraper disabled:
 
-    $ pipenv run ./server.py --dev --no-scrape
+    $ pipenv run python -m hyperschedule.server --dev --no-scrape
 
 Then hit the `/debug/reset` endpoint to clear the course data, and get
 an initial snapshot of the courses from Portal using `/debug/scrape`.

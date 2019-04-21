@@ -4,9 +4,9 @@ import json
 import os
 import sys
 
-import libcourse
-import liblingk
-from util import die
+import hyperschedule.libcourse as libcourse
+import hyperschedule.liblingk as liblingk
+from hyperschedule.util import die
 
 if __name__ == "__main__":
     args = sys.argv[1:]
@@ -18,11 +18,11 @@ if __name__ == "__main__":
             "semester": libcourse.SPRING,
             "year": 2019,
         })
-        with open("debug-desc-index.json", "w") as f:
+        with open("out/debug-desc-index.json", "w") as f:
             json.dump(index, f, indent=2)
     elif cmd == "write-lingk-data":
         data = liblingk.get_lingk_data(key, secret)
-        with open("debug-lingk-data.json", "w") as f:
+        with open("out/debug-lingk-data.json", "w") as f:
             json.dump(data, f, indent=2)
     else:
         die("invalid command: {}".format(cmd))

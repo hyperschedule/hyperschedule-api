@@ -9,7 +9,7 @@ the keys corresponding to the course code.
 
 import re
 
-from util import ScrapeError
+from hyperschedule.util import ScrapeError
 
 def schedule_sort_key(slot):
     """

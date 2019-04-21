@@ -25,10 +25,10 @@ import selenium.webdriver
 import selenium.webdriver.chrome.options
 import selenium.webdriver.support.ui
 
-import libcourse
-import liblingk
+import hyperschedule.libcourse as libcourse
+import hyperschedule.liblingk as liblingk
 
-from util import ScrapeError, log
+from hyperschedule.util import ScrapeError, log
 
 def unique_preserve_order(lst):
     """

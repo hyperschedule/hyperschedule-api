@@ -19,10 +19,10 @@ import traceback
 
 import requests
 
-import libcourse
-import util
+import hyperschedule.libcourse as libcourse
+import hyperschedule.util as util
 
-from util import ScrapeError, log, die
+from hyperschedule.util import ScrapeError, log, die
 
 DIR = pathlib.Path(__file__).resolve().parent
 
@@ -182,7 +182,8 @@ def fetch_and_update_course_data(config):
     args.append(
         "--kill-chrome" if config["kill_chrome"] else "--no-kill-chrome")
     process = subprocess.Popen(
-        [DIR / "run_portal_scrape.py", *args], stdout=subprocess.PIPE)
+        ["python", "-m", "hyperschedule.run_portal_scrape", *args],
+        stdout=subprocess.PIPE)
     try:
         output, _ = process.communicate(timeout=60)
     except subprocess.TimeoutExpired:
@@ -205,10 +206,10 @@ def write_course_data_to_cache_file():
     log("Finished writing course data to disk.")
 
 COURSE_DATA_CACHE_FILE = os.path.join(
-    os.path.dirname(__file__), "course-data.json")
+    os.path.dirname(__file__), "out/course-data.json")
 
 COURSE_DATA_PRETTY_CACHE_FILE = os.path.join(
-    os.path.dirname(__file__), "course-data-pretty.json")
+    os.path.dirname(__file__), "out/course-data-pretty.json")
 
 last_dms_update = None
 

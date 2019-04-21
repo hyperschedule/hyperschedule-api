@@ -2,11 +2,11 @@
 
 import argparse
 import json
-import libportal
 import os
 import sys
 
-import util
+import hyperschedule.libportal as libportal
+import hyperschedule.util as util
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
