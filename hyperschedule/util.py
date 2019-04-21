@@ -1,9 +1,22 @@
 """
-Utility module shared by libcourse, libportal, and server.
+Module containing assorted utility functions and constants.
 """
 
 import datetime
+import os
 import sys
+
+class UnsetClass:
+    """
+    Singleton class used to implement `Unset`.
+    """
+
+    def __repr__(self):
+        return "<Unset>"
+
+Unset = UnsetClass()
+
+del UnsetClass
 
 class ScrapeError(Exception):
     """
@@ -22,6 +35,12 @@ def log(message):
     """
     print("[{}] {}".format(format_timestamp(), message), file=sys.stderr)
 
+def warn(message):
+    """
+    Log a warning to stderr with the current timestamp.
+    """
+    log(message)
+
 def die(message):
     """
     Log a message to stderr with the current timestamp, and then exit
@@ -30,28 +49,53 @@ def die(message):
     log("fatal: " + message)
     sys.exit(1)
 
-NO_DEFAULT = object()
+# Default values for config vars. Set as cache=yes command-line
+# argument or HYPERSCHEDULE_CACHE=yes environment variable.
+ENV_DEFAULTS = {
+    "cache": "yes",
+    "debug": "yes",
+    "expose": "no",
+    "headless": "yes",
+    "kill_orphans": "no",
+    "lingk": "no",
+    "port": "3000",
+    "scraper_timeout": "60",
+    "snitch": "no",
+    "verbose": "yes",
+}
 
-# Modified from <https://stackoverflow.com/a/31347222/3538165>
-def add_boolean_arg(
-        parser, name, default=NO_DEFAULT, yes_args=None, no_args=None):
+def get_env(var):
     """
-    Add a boolean argument to the given argparse parser. By default
-    the --name and --no-name flags are generated, storing True and
-    False respectively into name, and it is mandatory to specify one
-    of the flags. If default is provided, then specifying a flag is no
-    longer mandatory. You can override --name with a list of synonyms
-    by passing yes_args, and likewise for --no-name with no_args.
+    Given the name of a config var, return its value.
     """
-    dest = name.replace("-", "_")
-    group = parser.add_mutually_exclusive_group(required=default is NO_DEFAULT)
-    if yes_args is None:
-        yes_args = ["--" + name]
-    if no_args is None:
-        no_args = ["--no-" + name]
-    for yes_arg in yes_args:
-        group.add_argument(yes_arg, dest=dest, action="store_true")
-    for no_arg in no_args:
-        group.add_argument(no_arg, dest=dest, action="store_false")
-    if default is not NO_DEFAULT:
-        parser.set_defaults(**{dest: default})
+    env_var = "HYPERSCHEDULE_" + var.upper()
+    return os.environ[env_var]
+
+def get_env_boolean(var):
+    """
+    Given the name of a config var, check the envrionment and return a
+    boolean. The var must be set to something that clearly indicates a
+    boolean value (several formats are accepted), otherwise die.
+    """
+    env_var = "HYPERSCHEDULE_" + var.upper()
+    val = os.environ[env_var]
+    yes = (val in ("1", "on")
+           or any(word.startswith(val.lower())
+                  for word in ("yes", "true", "enabled")))
+    if yes:
+        return True
+    no = (val in ("0", "off")
+          or any(word.startswith(val.lower())
+                 for word in ("no", "false", "disabled")))
+    if no:
+        return False
+    die("value for boolean config var {} (= {}) is malformed: {}"
+        .format(repr(var), env_var, repr(val)))
+
+def log_verbose(message):
+    """
+    Log a message to stderr, but only if the 'verbose' config var is
+    enabled.
+    """
+    if get_env_boolean("verbose"):
+        log(message)

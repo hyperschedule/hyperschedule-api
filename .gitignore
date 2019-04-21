@@ -1,4 +1,5 @@
-*.json
-*.log
 .env
 __pycache__
+out/*
+!out/.gitkeep
+!out/.dir-locals.el

@@ -10,121 +10,120 @@ domain as the API, the service in this repository also serves a single
 HTML page at the domain root which directs users to copy their data
 and migrate to the new frontend domain.
 
-You may see the service in action by visiting the following URLs:
+You may see the service in action by visiting the following URL:
 
-* <https://hyperschedule.herokuapp.com/api/v2/all-courses>
-* <https://hyperschedule.herokuapp.com/>
+* <https://hyperschedule.herokuapp.com/api/v3/courses>
 
-## Service usage
+## API v3
 
-The following endpoints are exposed:
-* `/`
-  * displays a static HTML page directing the user to copy their
-    schedule data and migrate to [hyperschedule.io]
-* `/api/v2/all-courses`
-  * returns a JSON map with the following keys:
-    * `courses`:
-      * non-empty list of distinct course objects (see below)
-    * `timestamp`:
-      * integer UNIX timestamp representing the time at which the data
-        was retrieved
-    * `malformedCourseCount`:
-      * non-negative integer giving the number of courses whose
-        information was entered incorrectly by the registrar
-* `/api/v2/courses-since/<timestamp>`
-  * `<timestamp>` is an integer UNIX timestamp; this endpoint returns
-    changes to the course list *since* that timestamp. It is expected
-    that the value of this parameter is taken from the `timestamp`
-    field in a previous query to the API.
-  * returns a JSON map with the following keys:
-    * `incremental`: boolean indicating whether an incremental update
-      is possible (incremental update data is only stored on the
-      server for approximately the last 30 minutes)
-    * `courses` (only if `incremental` is `false`):
-      * non-empty list of distinct course objects (see below)
-    * `diff` (only if `incremental` is `true`):
-      * JSON map with the following keys:
-        * `added`:
-          * list of maps, possibly empty, representing course objects
-            that have been added since `<timestamp>`
-        * `removed`:
-          * list of maps, possibly empty, representing course objects
-            that have been removed since `<timestamp>`. Only the keys
-            necessary to distinctly identify the course (see below)
-            are included.
-        * `modified`:
-          * list of maps, possibly empty, representing course objects
-            that have been modified since `<timestamp>`. Only the keys
-            necessary to distinctly identify the course (see below),
-            as well as the keys which have changed, are included.
-    * `timestamp`:
-      * integer UNIX timestamp representing the time at which the data
-        was retrieved
-    * `malformedCourseCount`:
-      * non-negative integer giving the number of courses whose
-        information was entered incorrectly by the registrar
-* `/api/v2/malformed-courses`
-  * possibly empty list of strings representing malformed courses
-    which are not included in the normal course listing (the length of
-    this list equals the value of `malformedCourseCount` returned from
-    the other endpoints). The format of these strings should not be
-    relied upon.
+The API exposes one endpoint,
+`/api/v3/courses?school=hmc[&since=<timestamp>]`. This endpoint
+returns data in JSON format, including a timestamp. This timestamp may
+be passed to the same endpoint in future requests to receive a diff
+(described below) instead of the full data.
 
-Course objects are maps with the following keys:
-* `courseCodeSuffix`
-  * string, possibly empty, not containing any slashes
-* `courseDescription`
-  * string or null
-* `courseName`
-  * non-empty string
-* `courseNumber`
-  * positive integer
-* `courseStatus`
-  * string, one of `open`, `closed`, or `reopened`
-* `department`
-  * non-empty string, not containing any slashes
-* `endDate`
-  * string in the format `YYYY-MM-DD`, representing a valid date
-* `faculty`
-  * non-empty list of non-empty strings
-* `firstHalfSemester`
-  * boolean
-* `openSeats`
-  * non-negative integer
-* `quarterCredits`
-  * non-negative integer
-* `schedule`
-  * list of maps, possibly empty, with keys:
-    * `days`
-      * non-empty string containing some subset of the characters
-        `MTWRFSU` in that order, without duplicates
-    * `endTime`
-      * string in the format `hh:mm`, representing a valid 24-hour
-        time
-    * `location`
-      * non-empty string
-    * `startTime`
-      * string in the format `hh:mm`, representing a valid 24-hour
-        time
-* `school`
-  * non-empty string, not containing any slashes
-* `secondHalfSemester`
-  * boolean
-* `section`
-  * positive integer
-* `startDate`
-  * string in the format `YYYY-MM-DD`, representing a valid date
-* `totalSeats`
-  * non-negative integer
+### Full data format
 
-Two course objects are considered *distinct* if they have differing
-values for at least one of `school`, `department`, `courseNumber`,
-`courseCodeSuffix`, or `section`. Since none of these values are
-allowed to contain slashes, they may be concatenated reversibly with
-slashes to form a unique string key by which to index the course.
+The response is a map with keys:
 
-Additional fields may be added to existing endpoints without
-incrementing the API version.
+* `data`: The course data.
+* `until`: Integer which may be passed as the `since` parameter on
+  subsequent requests.
+* `error`: String with an error message, or null. No guarantees are
+  made about the rest of the response if this key is non-null.
+* `full`: Boolean indicating whether `data` is the full course data.
+  Always true unless `since` is provided as a parameter in the API
+  request. If false, then `data` should be interpreted as a diff, as
+  per the next section.
+
+The course data is a map with keys:
+
+* `terms`: Map from term codes (`termCode`; see below) to *term
+  objects*.
+* `courses`: Map from course codes (`courseCode`; see below) to
+  *course objects*.
+
+Term objects are maps with keys:
+
+* `termCode`: Short name or code for the term, string.
+* `termSortKey`: List of JSON primitives indicating the sort order of
+  this term.
+* `termName`: Long or display name for the term, string.
+
+Course objects are maps with keys:
+
+* `courseCode`: Short name or code for the course, string.
+* `courseName`: Long or display name for the course, string.
+* `courseSortKey`: List of JSON primitives indicating the sort order
+  of this course.
+* `courseMutualExclusionKey`: List of JSON primitives which, if equal
+  to the mutual exclusion key on another course, indicates that the
+  two courses conflict (e.g. they are two sections of the same
+  course).
+* `courseDescription`: Course description, string or null.
+* `courseInstructors`: List of course instructors, strings, or null.
+* `courseTerm`: Term code, string.
+* `courseSchedule`: List of *schedule objects*.
+* `courseCredits`: Number of credits, string containing integer or
+  floating-point number.
+* `courseSeatsTotal`: Number of seats for class registration,
+  non-negative integer or null.
+* `courseSeatsFilled`: Number of seats filled during for class
+  registration, non-negative integer or null.
+* `courseWaitlistLength`: Length of waitlist for class registration,
+  non-negative integer or null.
+* `courseEnrollmentStatus`: Status of class registration, string or
+  null.
+
+Schedule objects are maps with keys:
+
+* `scheduleDays`: String containing some subset of the characters
+  `SMTWRFU` in that order, indicating which days the meeting is on.
+* `scheduleStartTime`: String in 24-hour `HH:MM` format, indicating
+  when the meeting starts.
+* `scheduleEndTime`: String in 24-hour `HH:MM` format, indicating when
+  the meeting ends.
+* `scheduleStartDate`: String in `YYYY-MM-DD` format, indicating when
+  on the calendar the meeting starts repeating, inclusive.
+* `scheduleEndDate`: String `YYYY-MM-DD`, indicating when on the
+  calendar the meeting stops repeating, inclusive.
+* `scheduleTermCount`: Number of terms into which the semester is
+  subdivided (e.g. `2` to support half-semester courses).
+* `scheduleTerms`: List of non-negative integers indicating which
+  terms during which the course meets (e.g. `[0]` or `[1]` for
+  first-half and second-half courses).
+* `scheduleLocation`: String indicating location of meeting.
+
+Do not rely on maps returned by the API having only the keys described
+above.
+
+### Diff format and resolution
+
+If you pass a `since` parameter to the API, you will get a response
+mostly in the same format as above, except that `data` *may be* a diff
+instead of the full course object (to see which, check `full`). The
+diff format is very similar to the full data format, except:
+
+* Some keys may be missing, at any level.
+* Some values may be replaced, at any level, with the string
+  `$delete`.
+
+To apply the diff, work recursively from the top level, using the
+following rules:
+
+* If at least one of the current data and diff is not a map, replace
+  the current data with the diff.
+* If the current data and diff are both maps, iterate through the keys
+  and values of both.
+  * If a key is absent in the diff, leave the current data alone.
+  * If a key is equal to `$delete` in the diff, remove the
+    corresponding key and value in the current data, if present.
+  * If a key is present in the diff but not equal to `$delete`:
+    * If the corresponding key is missing from the current data, copy
+      over the key and value from the diff.
+    * If the corresponding key is already present in the current data,
+      then apply the value in the diff as a diff to the value in the
+      current data (i.e. recurse to the top of these instructions).
 
 ## Development
 
@@ -141,93 +140,82 @@ Then, install the Python dependencies into a virtualenv by running:
 You may start the server in development mode on `localhost:3000` by
 running:
 
-    $ pipenv run python -m server --dev
+    $ make dev
 
-To scrape the Lingk API (and thereby obtain course descriptions), you
-must acquire a Lingk API key and secret from one of the Hyperschedule
-developers. Exporting the environment variables
-`HYPERSCHEDULE_LINGK_KEY` and `HYPERSCHEDULE_LINGK_SECRET` will cause
-Hyperschedule to fetch and serve course descriptions from Lingk.
+If you are working on the WSGI configuration, it may also be useful to
+test in mostly-production mode:
 
-To run in production mode instead, pass `--prod` when starting the
-server. You can change the port that the server listens on by
-exporting the environment variable `PORT`. Further configuration may
-be achieved via command-line arguments:
+    $ make prod
 
-* `--[no-]headless`: Don't spawn a graphical Chrome window for the web
-  scraping. Defaults to `--headless`. Change it if you wish to debug
-  the web scraping.
-* `--[no-]cache`: When the server starts up, try to read in the course
-  data from `courses.json` in this directory. Whenever the course data
-  is modified, write it back to that file. This allows the course data
-  to persist across server restarts. Defaults to `--cache` in
-  development, `--no-cache` in production. Warning: course data read
-  from the cache file is *not* validated!
-* `--[no-]scrape`: Run the web scraper, not just the server. Defaults
-  to `--scrape`. Disable it and use the debug endpoints if you wish to
-  test the incremental update logic.
-* `--[no-]snitch`: Update [Dead Man's Snitch][dms] on successful
-  course data update. This allows for notification on failure to
-  update. Defaults to `--no-snitch`. Should be enabled only during
-  deployment.
-* `--[no-]kill-chrome`: Kill extant Google Chrome processes when
-  starting a webscrape. This prevents them from building up if
-  Selenium hangs and we have to kill the running script (which
-  prevents Selenium from cleaning up properly, apparently). Defaults
-  to `--no-kill-chrome` to save your web browser, but should be
-  enabled during deployment.
+(Some features are still disabled because they should not be run
+locally. They are only enabled by `make heroku`, which should only be
+run on Heroku.)
+
+If you inspect the `Makefile`, you will see that these targets are
+just wrappers for:
+
+    $ pipenv run python -m hyperschedule.server [key=val ...]
+
+Hyperschedule may be configured by setting environment variables or
+passing command-line arguments. Setting the environment variable
+`HYPERSCHEDULE_FOO=bar` is equivalent to passing the command-line
+argument `foo=bar`. To pass custom configuration options other than
+the ones in `make dev` or `make prod`, you can do this (or just set
+environment variables):
+
+    $ make [dev | prod] ARGS="key=val ..."
+
+Here are the supported configuration options:
+
+* `cache=(yes|no)`: Whether to cache course data on disk, so that when
+  you start the server it can immediately serve data. Defaults to
+  `yes` for `dev`, `no` for `prod`.
+* `debug=(yes|no)`: Whether to use the Flask debugging server, or the
+  Gunicorn WSGI server. Defaults to `yes` for `dev`, `no` for `prod`.
+* `expose=(yes|no)`: Whether to allow access to the server to other
+  hosts on the local network. Defaults to `no`. For security, do not
+  enable this locally.
+* `headless=(yes|no)`: Whether to use a headless instance of Chrome
+  rather than launching a full graphical window. Defaults to `yes`.
+* `kill_orphans=(yes|no)`: Whether to kill instances of Google Chrome
+  that may be orphaned by an abnormal exit of Selenium. Defaults to
+  `no`. Needed when running in constrained-memory environment. Do not
+  enable this locally if you use Chrome as a web browser.
+* `lingk=(yes|no)`: Whether to actually scrape the Lingk API, or
+  whether to instead use a horrifying hack by which we parse a trashy
+  CSV that the registrar manually emailed to me. The advantage of the
+  former is that it's not totally horrifying. The advantage of the
+  latter is that we get course descriptions for Fall 2019. Defaults to
+  `yes`.
+* `port=N`: The port for the server to listen on. Defaults to `3000`.
+* `scraper_timeout=N`: Number of seconds that the scraper is allowed
+  to run before timing out. This includes all time that the scraper is
+  running (both Portal and Lingk). Defaults to `60`.
+* `snitch=(yes|no)`: Whether to contact [Dead Man's Snitch][dms] on a
+  successful course data update. Defaults to `no`. Do **not** enable
+  this locally.
+* `verbose=(yes|no)`: Whether to print more messages which might be
+  useful for debugging. Defaults to `yes`.
+
+If you have configured `lingk=yes` (not recommended currently), then
+to obtain course descriptions, you will need to set the environment
+variables `HYPERSCHEDULE_LINGK_KEY` and `HYPERSCHEDULE_LINGK_SECRET`.
+For security, you should do this in your [`.env`][dotenv] file rather
+than by passing command-line arguments. To obtain an API key and
+secret, contact [**@raxod502**][raxod502].
 
 You may wish to restart the server automatically when the code is
-changed (this works especially well with `--cache`). Install
-[`watchexec`][watchexec] and run:
+changed. Install [`watchexec`][watchexec] and run:
 
-    $ pipenv run watchexec -r -e py "python -m hyperschedule.server --dev ..."
+    $ watchexec -r -e py "make dev"
 
-When running in development mode, additional endpoints are available.
-These are especially useful for testing the incremental update logic.
-It is recommended to use [HTTPie] to interact with them. You can reset
-the course data to its initial state:
+Run the tests:
 
-    $ http PUT localhost:3000/debug/reset
+    $ make test
 
-You can provide a JSON file of courses (in the format under the
-`current` key in `courses.json`) and have it processed as if it were
-scraped from Portal (the timestamp defaults to the current time on the
-server):
+Run debugging commands (check the source code for details):
 
-    $ http PUT localhost:3000/debug/set-courses[/<timestamp>] @my-course-file.json
-
-If the server was run with `--no-scrape`, it may be useful to trigger
-a one-off scraping operation:
-
-    $ http PUT localhost:3000/debug/scrape
-
-A good way to test the incremental update logic is to start the server
-with the scraper disabled:
-
-    $ pipenv run python -m hyperschedule.server --dev --no-scrape
-
-Then hit the `/debug/reset` endpoint to clear the course data, and get
-an initial snapshot of the courses from Portal using `/debug/scrape`.
-After that, you can use [`jq`][jq] to extract the course data into an
-easily editable JSON file:
-
-    $ cat course-data.json | jq .current > courses.json
-
-Make whatever changes you would like, and then upload them using
-`/debug/set-courses`. The resulting update diffs can be inspected
-directly:
-
-    $ cat course-data.json | jq .updates
-
-Or you can test the public endpoint at
-`/api/v2/courses-since/<timestamp>`, using timestamps from either the
-raw update data and/or the initial timestamp located at the
-`initial_timestamp` key in `course-data.json`.
-
-The raw course data can be retrieved as JSON from the production
-server using the undocumented and unsupported
-`/experimental/course-data` endpoint.
+    $ pipenv run python -m hyperschedule.debug <cmd>
 
 ## Contributing
 
@@ -237,11 +225,10 @@ Please do! Refer to the [contributor guidelines][contributing] first.
 
 [chromedriver]: http://chromedriver.chromium.org/
 [dms]: https://deadmanssnitch.com/
+[dotenv]: https://github.com/theskumar/python-dotenv
 [frontend]: https://github.com/MuddCreates/hyperschedule
-[jq]: https://stedolan.github.io/jq/
-[httpie]: https://httpie.org/
-[hyperschedule.io]: https://hyperschedule.io/
 [pipenv]: https://docs.pipenv.org/
 [portal]: https://portal.hmc.edu/ICS/Portal_Homepage.jnz?portlet=Course_Schedules&screen=Advanced+Course+Search&screenType=next
 [python]: https://www.python.org/
+[raxod502]: https://github.com/raxod502
 [watchexec]: https://github.com/mattgreen/watchexec

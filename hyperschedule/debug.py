@@ -2,27 +2,41 @@
 
 import json
 import os
+import pprint
+import subprocess
 import sys
 
-import hyperschedule.libcourse as libcourse
-import hyperschedule.liblingk as liblingk
-from hyperschedule.util import die
+import hyperschedule
+import hyperschedule.scraper as scraper
+import hyperschedule.scraper.lingk as lingk
+import hyperschedule.util as util
 
 if __name__ == "__main__":
     args = sys.argv[1:]
     cmd, = args
-    key = os.environ.get("HYPERSCHEDULE_LINGK_KEY")
-    secret = os.environ.get("HYPERSCHEDULE_LINGK_SECRET")
-    if cmd == "write-desc-index":
-        index = liblingk.get_lingk_course_description_index(key, secret, {
-            "semester": libcourse.SPRING,
-            "year": 2019,
-        })
-        with open("out/debug-desc-index.json", "w") as f:
-            json.dump(index, f, indent=2)
-    elif cmd == "write-lingk-data":
-        data = liblingk.get_lingk_data(key, secret)
-        with open("out/debug-lingk-data.json", "w") as f:
-            json.dump(data, f, indent=2)
+    for var, val in util.ENV_DEFAULTS.items():
+        env_var = "HYPERSCHEDULE_" + var.upper()
+        if not os.environ.get(env_var):
+            os.environ[env_var] = val
+    if cmd == "run-scraper":
+        fname = hyperschedule.ROOT_DIR / "out" / "run-scraper.json"
+        print("Running scraper")
+        course_data = scraper.get_course_data(None)
+        print("Writing to file {}".format(fname))
+        with open(fname, "w") as f:
+            json.dump(course_data, f, indent=2)
+            f.write("\n")
+    elif cmd == "repl":
+        try:
+            sys.exit(subprocess.run(["python"]).returncode)
+        except KeyboardInterrupt:
+            sys.exit(1)
+    elif cmd == "scrape-lingk":
+        fname = hyperschedule.ROOT_DIR / "out" / "scrape-lingk.py"
+        print("Scraping Lingk")
+        desc_index = lingk.get_course_descriptions()
+        print("Writing to file {}".format(fname))
+        with open(fname, "w") as f:
+            pprint.pprint(desc_index, f)
     else:
-        die("invalid command: {}".format(cmd))
+        util.die("invalid command: {}".format(cmd))
