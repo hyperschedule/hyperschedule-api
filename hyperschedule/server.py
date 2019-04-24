@@ -19,6 +19,7 @@ import traceback
 
 import requests
 
+import hyperschedule
 import hyperschedule.libcourse as libcourse
 import hyperschedule.util as util
 
@@ -200,16 +201,12 @@ def fetch_and_update_course_data(config):
 def write_course_data_to_cache_file():
     log("Writing course data to cache on disk...")
     with open(COURSE_DATA_CACHE_FILE, "w") as f:
-        json.dump(course_data, f)
-    with open(COURSE_DATA_PRETTY_CACHE_FILE, "w") as f:
         json.dump(course_data, f, indent=2)
+        f.write("\n")
     log("Finished writing course data to disk.")
 
-COURSE_DATA_CACHE_FILE = os.path.join(
-    os.path.dirname(__file__), "out/course-data.json")
-
-COURSE_DATA_PRETTY_CACHE_FILE = os.path.join(
-    os.path.dirname(__file__), "out/course-data-pretty.json")
+COURSE_DATA_CACHE_FILE = (
+    hyperschedule.ROOT_DIR.parent / "out" / "course-data.json")
 
 last_dms_update = None
 
