@@ -339,30 +339,27 @@ def get_latest_course_list(config):
         except ScrapeError:
             malformed_courses.append(format_raw_course(raw_course))
     courses.sort(key=libcourse.course_sort_key)
-    lingk_key = config["lingk_key"]
-    lingk_secret = config["lingk_secret"]
-    if lingk_key and lingk_secret:
-        num_with = 0
-        num_without = 0
-        try:
-            desc_index = liblingk.get_lingk_course_description_index(
-                lingk_key, lingk_secret, term)
-        except ScrapeError as e:
-            log("Failed to scrape Lingk: {}".format(e))
-            traceback.print_exc()
-            return courses, malformed_courses
-        for course in courses:
-            # Adjust the section number to 0, so that we can look up
-            # in the non-standard index format returned by liblingk
-            # (which doesn't care about section numbers).
-            course_copy = dict(course)
-            course_copy["section"] = 0
-            index_key = libcourse.course_to_index_key(course_copy)
-            if index_key in desc_index:
-                course["courseDescription"] = desc_index[index_key]
-                num_with += 1
-            else:
-                num_without += 1
-        log("Added course descriptions to {} out of {} courses"
-            .format(num_with, num_with + num_without))
+    num_with = 0
+    num_without = 0
+    try:
+        desc_index = liblingk.get_lingk_course_description_index(
+            config["lingk_key"], config["lingk_secret"], term)
+    except ScrapeError as e:
+        log("Failed to scrape Lingk: {}".format(e))
+        traceback.print_exc()
+        return courses, malformed_courses
+    for course in courses:
+        # Adjust the section number to 0, so that we can look up
+        # in the non-standard index format returned by liblingk
+        # (which doesn't care about section numbers).
+        course_copy = dict(course)
+        course_copy["section"] = 0
+        index_key = libcourse.course_to_index_key(course_copy)
+        if index_key in desc_index:
+            course["courseDescription"] = desc_index[index_key]
+            num_with += 1
+        else:
+            num_without += 1
+    log("Added course descriptions to {} out of {} courses"
+        .format(num_with, num_with + num_without))
     return courses, malformed_courses

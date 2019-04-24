@@ -143,11 +143,19 @@ running:
 
     $ pipenv run python -m server --dev
 
-To scrape the Lingk API (and thereby obtain course descriptions), you
-must acquire a Lingk API key and secret from one of the Hyperschedule
-developers. Exporting the environment variables
+To retrieve course descriptions, Hyperschedule ostensibly scrapes the
+Lingk API. However, the Lingk API is currently broken (rip), so
+instead it downloads a zip file from Google Drive that was given to me
+by the registrar. To tell Hyperschedule to use the API instead of
+doing this, export the environment variable
+`HYPERSCHEDULE_LINGK_ENABLE` to a non-empty string. In this case, you
+must also acquire a Lingk API key and secret from one of the
+Hyperschedule developers. Exporting the environment variables
 `HYPERSCHEDULE_LINGK_KEY` and `HYPERSCHEDULE_LINGK_SECRET` will cause
-Hyperschedule to fetch and serve course descriptions from Lingk.
+Hyperschedule to fetch and serve course descriptions from Lingk. (It
+is recommended to set these variables in a [`.env`][dotenv] file in
+the project root, since they will then be automatically picked up by
+Pipenv.)
 
 To run in production mode instead, pass `--prod` when starting the
 server. You can change the port that the server listens on by
@@ -237,6 +245,7 @@ Please do! Refer to the [contributor guidelines][contributing] first.
 
 [chromedriver]: http://chromedriver.chromium.org/
 [dms]: https://deadmanssnitch.com/
+[dotenv]: https://github.com/theskumar/python-dotenv
 [frontend]: https://github.com/MuddCreates/hyperschedule
 [jq]: https://stedolan.github.io/jq/
 [httpie]: https://httpie.org/
