@@ -298,6 +298,17 @@ def process_course(raw_course, term):
             "scheduleTerms": terms,
             "scheduleLocation": location,
         })
+    if not schedule:
+        schedule.append({
+            "scheduleDays": "",
+            "scheduleStartTime": "00:00",
+            "scheduleEndTime": "00:00",
+            "scheduleStartDate": begin_date.strftime("%Y-%m-%d"),
+            "scheduleEndDate": end_date.strftime("%Y-%m-%d"),
+            "scheduleTermCount": term_count,
+            "scheduleTerms": terms,
+            "scheduleLocation": "N/A",
+        })
     schedule = unique_preserve_order(schedule)
     num_credits = raw_course["credits"]
     try:
