@@ -14,6 +14,7 @@ requests = {extras = ["security"],version = "*"}
 psutil = "*"
 frozendict = "*"
 flask-cors = "*"
+atomicwrites = "*"
 
 [dev-packages]
 "flake8" = "*"

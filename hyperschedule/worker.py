@@ -17,6 +17,7 @@ import tempfile
 import threading
 import traceback
 
+import atomicwrites
 import requests
 import requests.exceptions
 
@@ -368,14 +369,9 @@ def cache_file_write(data):
     """
     f = None
     try:
-        # Do an atomic write.
-        with tempfile.NamedTemporaryFile("w", delete=False) as f:
+        with atomicwrites.atomic_write(CACHE_FILE, overwrite=True) as f:
             json.dump(data, f, indent=2)
             f.write("\n")
-        # tempfile raises an error if we rename the file (why did
-        # anyone think this was a good idea??). Thus we have to pass
-        # delete=False.
-        pathlib.Path(f.name).rename(CACHE_FILE)
     except OSError as e:
         util.warn("Failed to write cache file: {}".format(e))
     finally:
