@@ -60,7 +60,7 @@ def view_index():
     https://hyperschedule.io.
     """
     return flask.send_from_directory(
-        hyperschedule.ROOT_DIR.parent, "html/index.html")
+        hyperschedule.ROOT_DIR, "html/index.html")
 
 @app.route("/api/v3/courses")
 @nocache
