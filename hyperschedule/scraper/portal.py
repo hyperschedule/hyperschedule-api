@@ -316,19 +316,19 @@ def process_course(raw_course, term):
     except ValueError:
         raise ScrapeError(
             "malformed credit count: {}".format(repr(num_credits)))
-    if num_credits < 0:
+    if num_credits < 0.0:
         raise ScrapeError(
             "negative credit count: {}".format(raw_course["credits"]))
-    if "Colloquium" in course_name and num_credits == 0:
+    if "Colloquium" in course_name and num_credits == 0.0:
         num_credits = 0.5
-    elif re.match("PE ", course_code) and num_credits == 0:
-        num_credits = 1
+    elif re.match("PE ", course_code) and num_credits == 0.0:
+        num_credits = 1.0
     elif num_credits == 0.25:
-        num_credits = 1
+        num_credits = 1.0
     elif not re.search(r"HM-", course_code):
-        num_credits *= 3
-    if num_credits == 9:
-        num_credits = 3
+        num_credits *= 3.0
+    if num_credits == 9.0:
+        num_credits = 3.0
     num_credits = str(num_credits)
     course_description = raw_course["course_description"]
     return {
