@@ -327,6 +327,8 @@ def process_course(raw_course, term):
         num_credits = 1
     elif not re.search(r"HM-", course_code):
         num_credits *= 3
+    if num_credits == 9:
+        num_credits = 3
     num_credits = str(num_credits)
     course_description = raw_course["course_description"]
     return {
