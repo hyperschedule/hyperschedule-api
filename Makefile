@@ -28,3 +28,12 @@ lint:
 
 .PHONY: travis
 travis: test lint
+
+.PHONY: sandwich
+sandwich:
+	@if (( $EUID != 0 )); then			\
+		echo "What? Make it yourself." >&2;	\
+		exit 1;					\
+	else						\
+		echo "Okay." >&2;			\
+	fi
