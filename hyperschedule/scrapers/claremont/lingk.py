@@ -28,7 +28,7 @@ import zipfile
 import requests
 import requests.exceptions
 
-import hyperschedule.scraper.shared as shared
+import hyperschedule.scrapers.claremont.shared as shared
 import hyperschedule.util as util
 
 from hyperschedule.util import ScrapeError

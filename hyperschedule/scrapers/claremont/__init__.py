@@ -8,9 +8,9 @@ import traceback
 
 import psutil
 
-import hyperschedule.scraper.lingk as lingk
-import hyperschedule.scraper.portal as portal
-import hyperschedule.scraper.shared as shared
+import hyperschedule.scrapers.claremont.lingk as lingk
+import hyperschedule.scrapers.claremont.portal as portal
+import hyperschedule.scrapers.claremont.shared as shared
 import hyperschedule.util as util
 
 from hyperschedule.util import ScrapeError

@@ -7,8 +7,8 @@ import subprocess
 import sys
 
 import hyperschedule
-import hyperschedule.scraper as scraper
-import hyperschedule.scraper.lingk as lingk
+import hyperschedule.scrapers.claremont as scraper
+import hyperschedule.scrapers.claremont.lingk as lingk
 import hyperschedule.util as util
 
 if __name__ == "__main__":

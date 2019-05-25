@@ -5,7 +5,7 @@ Main entry point for the HMC course scraper. See __init__.py.
 import json
 import sys
 
-import hyperschedule.scraper as scraper
+import hyperschedule.scrapers.claremont as scraper
 
 if __name__ == "__main__":
     try:

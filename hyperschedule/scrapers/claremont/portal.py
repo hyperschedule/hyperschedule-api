@@ -24,8 +24,8 @@ import selenium.webdriver
 import selenium.webdriver.chrome.options
 import selenium.webdriver.support.ui
 
-import hyperschedule.scraper as scraper
-import hyperschedule.scraper.shared as shared
+import hyperschedule.scrapers.claremont as scraper
+import hyperschedule.scrapers.claremont.shared as shared
 import hyperschedule.util as util
 
 from hyperschedule.util import ScrapeError

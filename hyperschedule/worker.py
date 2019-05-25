@@ -299,7 +299,7 @@ def try_compute_data(s3, webhook, old_data):
     try:
         util.log("Running scraper")
         process = subprocess.Popen(
-            ["python", "-m", "hyperschedule.scraper"],
+            ["python", "-m", "hyperschedule.scrapers.claremont"],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE)
         output, _ = process.communicate(
             input=json.dumps(old_data).encode(), timeout=scraper_timeout)
