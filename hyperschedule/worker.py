@@ -313,8 +313,8 @@ def try_compute_data(s3, webhook, old_data):
         if "$delete" in output:
             raise ScrapeError("scraper output contains '$delete'")
         data = json.loads(output)
-        # if util.get_env_boolean("snitch"):
-        #     webhook.get()
+        if util.get_env_boolean("snitch"):
+            webhook.get()
         if util.get_env_boolean("cache"):
             cache_file_write(data)
         if util.get_env_boolean("s3_write"):
