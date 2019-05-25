@@ -59,6 +59,8 @@ ENV_DEFAULTS = {
     "kill_orphans": "no",
     "lingk": "no",
     "port": "3000",
+    "s3_read": "no",
+    "s3_write": "no",
     "scraper_timeout": "60",
     "snitch": "no",
     "verbose": "yes",

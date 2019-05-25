@@ -18,6 +18,8 @@ import threading
 import traceback
 
 import atomicwrites
+import boto3
+import botocore.exceptions
 import requests
 import requests.exceptions
 
@@ -275,7 +277,7 @@ class Webhook:
         resp = requests.get(self.url)
         resp.raise_for_status()
 
-def try_compute_data(webhook, old_data):
+def try_compute_data(s3, webhook, old_data):
     """
     Try to run the scraper and return course data. If something goes
     wrong, raise `ScrapeError`. Otherwise, invoke the provided
@@ -315,6 +317,8 @@ def try_compute_data(webhook, old_data):
         #     webhook.get()
         if util.get_env_boolean("cache"):
             cache_file_write(data)
+        if util.get_env_boolean("s3_write"):
+            s3_write(s3, data)
     except OSError as e:
         raise ScrapeError("unexpected error while running scraper: {}"
                           .format(e)) from None
@@ -329,14 +333,14 @@ def try_compute_data(webhook, old_data):
         util.warn("failed to reach success webhook: {}".format(e))
     return data
 
-def compute_data(webhook, old_data):
+def compute_data(s3, webhook, old_data):
     """
     Try to run the scraper and return course data (see
     `try_compute_data`). If something goes wrong, log the error and
     return `util.Unset`.
     """
     try:
-        data = try_compute_data(webhook, old_data)
+        data = try_compute_data(s3, webhook, old_data)
         util.log("Scraper succeeded")
         return data
     except ScrapeError as e:
@@ -383,6 +387,33 @@ def cache_file_write(data):
             except OSError:
                 pass
 
+S3_BUCKET = "hyperschedule"
+S3_KEY = "courses.json"
+
+def s3_read(s3):
+    """
+    Read and return data from the scraper result S3 bucket. If this
+    fails, log the error and return `util.Unset`. `s3` is a boto3 S3
+    resource.
+    """
+    try:
+        obj = s3.Object(S3_BUCKET, S3_KEY)
+        return json.load(obj.get()["Body"])
+    except (botocore.exceptions.BotoCoreError, json.JSONDecodeError) as e:
+        util.warn("Failed to read S3: {}".format(e))
+        return Unset
+
+def s3_write(s3, data):
+    """
+    Write provided `data` to S3 bucket. If this fails, log the error.
+    `s3` is a boto3 S3 resource.
+    """
+    try:
+        obj = s3.Object(S3_BUCKET, S3_KEY)
+        obj.put(Body=json.dumps(data).encode())
+    except botocore.exceptions.BotoCoreError as e:
+        util.warn("Failed to write S3: {}".format(e))
+
 class HyperscheduleWorker(DiffWorker):
     """
     Class abstracting the Hyperschedule background scraper task.
@@ -395,13 +426,17 @@ class HyperscheduleWorker(DiffWorker):
         `start`.
         """
         cache = util.get_env_boolean("cache")
-        if cache:
-            initial_data = cache_file_read()
+        initial_data = cache_file_read() if cache else Unset
+        if util.get_env_boolean("s3_read") or util.get_env_boolean("s3_write"):
+            s3 = boto3.resource("s3")
         else:
-            initial_data = Unset
+            s3 = Unset
+        if initial_data is Unset and util.get_env_boolean("s3_read"):
+            initial_data = s3_read(s3)
         webhook = Webhook(WEBHOOK_URL, WEBHOOK_TIMEOUT)
-        util.log("Starting worker (caching {})"
-                 .format("enabled" if cache else "disabled"))
+        util.log("Starting worker (on-disk cache {}, S3 {})"
+                 .format("enabled" if cache else "disabled",
+                         "enabled" if s3 is not Unset else "disabled"))
         super().__init__(
-            lambda old_data: compute_data(webhook, old_data),
+            lambda old_data: compute_data(s3, webhook, old_data),
             SCRAPER_REPEAT_DELAY, initial_data=initial_data)

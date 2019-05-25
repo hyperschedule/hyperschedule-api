@@ -188,6 +188,12 @@ Here are the supported configuration options:
   latter is that we get course descriptions for Fall 2019. Defaults to
   `yes`.
 * `port=N`: The port for the server to listen on. Defaults to `3000`.
+* `s3_read=(yes|no)`: Whether to read course data from Amazon S3 at
+  startup if it is not available in the on-disk cache. Defaults to
+  `no`.
+* `s3_write=(yes|no)`: Whether to write course data to Amazon S3 after
+  it is generated. Should only be enabled in production. Defaults to
+  `no`.
 * `scraper_timeout=N`: Number of seconds that the scraper is allowed
   to run before timing out. This includes all time that the scraper is
   running (both Portal and Lingk). Defaults to `60`.
@@ -203,6 +209,11 @@ variables `HYPERSCHEDULE_LINGK_KEY` and `HYPERSCHEDULE_LINGK_SECRET`.
 For security, you should do this in your [`.env`][dotenv] file rather
 than by passing command-line arguments. To obtain an API key and
 secret, contact [**@raxod502**][raxod502].
+
+If you have configured `s3_read=yes`, then you will need to [configure
+AWS credentials][aws-creds]. The easiest way to do this is to install
+the [AWS CLI][aws-cli] and run `aws configure`. Contact
+[**@raxod502**][raxod502] for credentials.
 
 You may wish to restart the server automatically when the code is
 changed. Install [`watchexec`][watchexec] and run:
@@ -223,6 +234,8 @@ Please do! Refer to the [contributor guidelines][contributing] first.
 
 [contributing]: CONTRIBUTING.md
 
+[aws-cli]: https://aws.amazon.com/cli/
+[aws-creds]: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/configuration.html
 [chromedriver]: http://chromedriver.chromium.org/
 [dms]: https://deadmanssnitch.com/
 [dotenv]: https://github.com/theskumar/python-dotenv

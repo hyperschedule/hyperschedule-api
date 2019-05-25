@@ -1,7 +1,7 @@
 PIPENV := pipenv run
 SERVER := python -m hyperschedule.server
 PROD := cache=no debug=no
-HEROKU := expose=yes kill_orphans=yes port=${PORT} snitch=yes
+HEROKU := expose=yes kill_orphans=yes port=${PORT} s3_read=yes s3_write=yes snitch=yes
 TEST := python -m unittest discover -s hyperschedule/tests
 LINT := find hyperschedule -name '*.py' -exec flake8 '{}' ';'
 IGNORE_FAIL := || true
