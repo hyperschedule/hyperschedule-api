@@ -38,5 +38,15 @@ if __name__ == "__main__":
         print("Writing to file {}".format(fname))
         with open(fname, "w") as f:
             pprint.pprint(desc_index, f)
+    elif cmd == "get-lingk-response":
+        fname = hyperschedule.ROOT_DIR / "out" / "lingk-response.json"
+        key = os.environ.get("HYPERSCHEDULE_LINGK_KEY")
+        secret = os.environ.get("HYPERSCHEDULE_LINGK_SECRET")
+        print("Getting Lingk API response")
+        data = lingk.get_lingk_api_data(key, secret)
+        print("Writing to file {}".format(fname))
+        with open(fname, "w") as f:
+            json.dump(data, f, indent=2)
+            f.write("\n")
     else:
         util.die("invalid command: {}".format(cmd))
