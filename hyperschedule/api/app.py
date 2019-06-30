@@ -61,6 +61,13 @@ def view_index():
     return flask.send_from_directory(
         hyperschedule.ROOT_DIR, "html/index.html")
 
+@app.route("/health-check")
+def view_health_check():
+    """
+    View for the ELB health check.
+    """
+    return "", 204
+
 @app.route("/api/v4/courses")
 @nocache
 def view_api_v4_get():
