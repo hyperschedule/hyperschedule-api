@@ -12,6 +12,9 @@ import sys
 import hyperschedule.util as util
 
 def exec_cmd(cmd):
+    """
+    Print a shell command (a list) and run it.
+    """
     print(" ".join(map(shlex.quote, cmd)))
     try:
         sys.exit(subprocess.run(cmd).returncode)
@@ -38,7 +41,7 @@ if __name__ == "__main__":
         val = config[var]
         env_var = "HYPERSCHEDULE_" + var.upper()
         os.environ[env_var] = val
-    app = "hyperschedule.app:app"
+    app = "hyperschedule.api.app:app"
     port = util.get_env("port")
     host = "0.0.0.0" if util.get_env_boolean("expose") else "127.0.0.1"
     if util.get_env_boolean("debug"):

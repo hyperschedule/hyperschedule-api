@@ -1,5 +1,5 @@
 PIPENV := pipenv run
-SERVER := python -m hyperschedule.server
+SERVER := python -m hyperschedule.api
 PROD := cache=no debug=no
 HEROKU := expose=yes kill_orphans=yes port=${PORT} s3_read=yes s3_write=yes snitch=yes
 TEST := python -m unittest discover -s hyperschedule/tests

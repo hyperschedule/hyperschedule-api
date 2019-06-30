@@ -1,5 +1,8 @@
 ## Hyperschedule scraper
 
+**Warning: README has not yet been updated to reflect major
+architectural changes.**
+
 This repository contains a Python webapp which scrapes information
 from the [Claremont Colleges course catalog][portal] and exposes it
 via a faster and more usable JSON API.
