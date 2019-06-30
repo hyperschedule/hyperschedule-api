@@ -54,8 +54,8 @@ def die(message):
 ENV_DEFAULTS = {
     "cache": "yes",
     "debug": "yes",
-    "expose": "no",
     "headless": "yes",
+    "host": "127.0.0.1",
     "kill_orphans": "no",
     "lingk": "no",
     "port": "3000",

@@ -1,0 +1,12 @@
+FROM alpine:3.10
+
+COPY scripts/docker-install-system.sh /tmp/
+RUN /tmp/docker-install-system.sh
+
+COPY scripts/docker-install-system-dev.sh /tmp/
+RUN /tmp/docker-install-system-dev.sh
+
+COPY scripts/docker-install-project.sh pyproject.toml poetry.lock /tmp/
+RUN /tmp/docker-install-project.sh
+
+EXPOSE 22

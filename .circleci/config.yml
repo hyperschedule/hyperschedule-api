@@ -1,0 +1,35 @@
+version: 2
+jobs:
+  build_and_test:
+    docker:
+      - image: docker:18.09
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run: docker build . -t "$HEROKU_IMAGE"
+      - run: docker run -it --rm "$HEROKU_IMAGE" make ci
+  build_test_and_deploy:
+    docker:
+      - image: docker:18.09
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run: apk add --no-cache --no-progress bash curl nodejs
+      - run: curl https://cli-assets.heroku.com/install.sh | sh
+      - run: heroku container:login
+      - run: docker build . -t "$HEROKU_IMAGE"
+      - run: docker run -it --rm "$HEROKU_IMAGE" make ci
+      - run: docker push "$HEROKU_IMAGE"
+      - run: heroku container:release web -a hyperschedule-api
+workflows:
+  version: 2
+  ci:
+    jobs:
+      - build_and_test:
+          filters:
+            branches:
+              ignore: api-v4
+      - build_test_and_deploy:
+          filters:
+            branches:
+              only: api-v4

@@ -7,6 +7,8 @@ import datetime
 
 import requests
 
+import hyperschedule.util
+
 from hyperschedule.util import Unset
 
 # URL to GET when hearing from the scraper.
@@ -17,9 +19,6 @@ WEBHOOK_RATE_LIMIT = 5 * 60
 
 # Number of seconds to wait before timing out webhook GET request.
 WEBHOOK_TIMEOUT = 5
-
-# Whether to enable the webhook. Disabled while API v3 is still live.
-WEBHOOK_ENABLED = False
 
 class Webhook:
     """
@@ -57,5 +56,5 @@ def report_success():
     """
     Report successful scraping to Dead Man's Snitch.
     """
-    if WEBHOOK_ENABLED:
+    if hyperschedule.util.get_env_boolean("snitch"):
         webhook.get()

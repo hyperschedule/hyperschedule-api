@@ -1,0 +1,28 @@
+[tool.poetry]
+name = "hyperschedule-api"
+version = "0"
+description = "API for Hyperschedule, the fast course scheduler"
+authors = ["Radon Rosborough <radon.neon@gmail.com>"]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = ">=3.5, <4"
+atomicwrites = "^1.3"
+beautifulsoup4 = "^4.7"
+boto3 = "^1.9"
+flask = "^1.0"
+flask-cors = "^3.0"
+frozendict = "^1.2"
+gunicorn = "^19.9"
+lxml = "^4.3"
+psutil = "^5.6"
+python-dateutil = "^2.8"
+requests = "^2.22"
+selenium = "^3.141"
+
+[tool.poetry.dev-dependencies]
+flake8 = "^3.7"
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"

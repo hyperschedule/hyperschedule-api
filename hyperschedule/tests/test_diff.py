@@ -1,6 +1,6 @@
 import unittest
 
-from hyperschedule.worker import apply_diff, compute_diff, merge_diffs
+from hyperschedule.api.diff import apply_diff, compute_diff, merge_diffs
 
 class TestDiff(unittest.TestCase):
 

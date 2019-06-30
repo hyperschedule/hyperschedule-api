@@ -40,10 +40,11 @@ if __name__ == "__main__":
             config[var] = val
         val = config[var]
         env_var = "HYPERSCHEDULE_" + var.upper()
-        os.environ[env_var] = val
+        if env_var not in os.environ:
+            os.environ[env_var] = val
     app = "hyperschedule.api.app:app"
+    host = util.get_env("host")
     port = util.get_env("port")
-    host = "0.0.0.0" if util.get_env_boolean("expose") else "127.0.0.1"
     if util.get_env_boolean("debug"):
         os.environ["FLASK_ENV"] = "development"
         os.environ["FLASK_APP"] = app
