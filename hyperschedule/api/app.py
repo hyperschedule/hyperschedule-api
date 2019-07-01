@@ -68,7 +68,7 @@ def view_health_check():
     """
     return "", 204
 
-@app.route("/api/v4/courses")
+@app.route("/v4/courses")
 @nocache
 def view_api_v4_get():
     """
@@ -101,7 +101,7 @@ def view_api_v4_get():
         "term": term,
     })
 
-@app.route("/api/v4/courses", methods=["POST"])
+@app.route("/v4/courses", methods=["POST"])
 def view_api_v4_post():
     """
     View for the Hyperschedule API used by the scrapers to update
