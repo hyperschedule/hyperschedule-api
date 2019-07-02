@@ -398,7 +398,9 @@ def s3_read(s3):
     try:
         obj = s3.Object(S3_BUCKET, S3_KEY)
         return json.load(obj.get()["Body"])
-    except (botocore.exceptions.BotoCoreError, json.JSONDecodeError) as e:
+    except (botocore.exceptions.BotoCoreError,
+            botocore.exceptions.ClientError,
+            json.JSONDecodeError) as e:
         util.warn("Failed to read S3: {}".format(e))
         return Unset
 
@@ -410,7 +412,8 @@ def s3_write(s3, data):
     try:
         obj = s3.Object(S3_BUCKET, S3_KEY)
         obj.put(Body=json.dumps(data).encode())
-    except botocore.exceptions.BotoCoreError as e:
+    except (botocore.exceptions.BotoCoreError,
+            botocore.exceptions.ClientError) as e:
         util.warn("Failed to write S3: {}".format(e))
 
 class HyperscheduleWorker(DiffWorker):
