@@ -58,4 +58,4 @@ help: ## Show this message
 		sed 's/^/  make /'		| \
 		sed 's/:[^#]*[#]# /|/'		| \
 		sed 's/%/LANG/'			| \
-column -t -s'|' >&2
+		column -t -s'|' >&2
