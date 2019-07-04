@@ -3,14 +3,10 @@
 set -e
 set -o pipefail
 
-# Installing lxml and psutil here means we don't need to build them
-# from source (which happens if we install them via Pip). We need
-# util-linux for the column utility used in 'make help'.
+# We need util-linux for the column utility used in 'make help'.
 packages="
 
 make
-py3-lxml
-py3-psutil
 python3
 util-linux
 
