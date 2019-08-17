@@ -61,7 +61,7 @@ ENV_DEFAULTS = {
     "port": "3000",
     "s3_read": "no",
     "s3_write": "no",
-    "scraper_timeout": "60",
+    "scraper_timeout": "120",
     "snitch": "no",
     "verbose": "yes",
 }

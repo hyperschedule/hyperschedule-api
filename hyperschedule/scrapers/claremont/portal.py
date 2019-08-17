@@ -119,19 +119,26 @@ def parse_table_row(row_idx, row):
     """
     elements = row.find_all("td")
     try:
-        (_add, course_code, name, faculty,
-         seats, status, schedule, num_credits, begin, end) = elements
+        (_add, course_code, name, seats, status, faculty_and_schedule,
+         num_credits, begin, end) = elements
     except ValueError:
         raise ScrapeError(
             "could not extract course list table row elements "
             "from Portal HTML (for row {})".format(row_idx))
+    all_faculty = []
+    schedule = []
+    for item in faculty_and_schedule.find_all("li"):
+        faculty, meeting = item.text.split(" / ")
+        # This list gets uniquified later.
+        all_faculty.append(faculty)
+        schedule.append(meeting)
     return {
         "course_code": course_code.text,
         "course_name": name.text,
-        "faculty": faculty.text,
+        "faculty": all_faculty,
         "seats": seats.text,
         "status": status.text,
-        "schedule": [stime.text for stime in schedule.find_all("li")],
+        "schedule": schedule,
         "credits": num_credits.text,
         "begin_date": begin.text,
         "end_date": end.text,
@@ -179,7 +186,7 @@ def format_raw_course(raw_course):
     return re.sub(r"\s+", " ", desc).strip()
 
 COURSE_AND_SECTION_REGEX = r"([^-]+)-([0-9]+)"
-SCHEDULE_REGEX = (r"([MTWRFSU]+)\xa0([0-9]+:[0-9]+(?: ?[AP]M)?) - "
+SCHEDULE_REGEX = (r"([MTWRFSU]+)\xa0([0-9]+:[0-9]+(?: ?[AP]M)?) ?- ?"
                   "([0-9]+:[0-9]+ ?[AP]M); ([A-Za-z0-9, ]+)")
 DAYS_OF_WEEK = "MTWRFSU"
 
@@ -199,7 +206,7 @@ def process_course(raw_course, term):
     course_name = raw_course["course_name"].strip()
     if not course_name:
         raise ScrapeError("empty string for course name")
-    faculty = sorted(set(re.split(r"\s*\n\s*", raw_course["faculty"].strip())))
+    faculty = sorted(set(f.strip() for f in raw_course["faculty"]))
     if not faculty:
         raise ScrapeError("no faculty")
     for faculty_name in faculty:
@@ -256,7 +263,7 @@ def process_course(raw_course, term):
                                   end_date.strftime("%Y-%m-%d")))
     schedule = []
     for slot in raw_course["schedule"]:
-        if slot.startswith("0:00 - 0:00 AM"):
+        if re.match(r"To Be Arranged\xa00?0:00 ?- ?0?0:00 ?AM", slot):
             continue
         match = re.match(SCHEDULE_REGEX, slot)
         if not match:
