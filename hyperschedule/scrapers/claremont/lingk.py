@@ -46,7 +46,7 @@ LINGK_URL = ("https://www.lingkapis.com{}?limit=1000000000"
 # Full URL to download hacky Lingk CSV file that the registrar gave
 # me.
 LINGK_ZIP_URL = ("https://drive.google.com/uc?export=download&id={}"
-                 .format("1rBLpKPamVzHUQ8UjgmkSqSaVsT7KeT6m"))
+                 .format("1DMHoyIvQthANjqO1DIv78lmWp4b8WDCp"))
 
 # Number of times to retry getting data from the Lingk API if it
 # returns a spurious authentication error.
@@ -210,10 +210,8 @@ def lingk_csv_data_to_course_descriptions(data):
         if not description:
             continue
         description = " ".join(description.split())
-        if index_key in desc_map:
-            # If two conflicting descriptions for the same course code
-            # (yep, it happens), pick whichever one is longer :/
-            description = max(description, desc_map[index_key], key=len)
+        # If two conflicting descriptions for the same course code
+        # (yep, it happens), pick the one that comes later :/
         desc_map[index_key] = description
     if len(desc_map) < 100:
         raise ScrapeError(
