@@ -30,6 +30,7 @@ import hyperschedule.util as util
 
 from hyperschedule.util import ScrapeError
 
+
 def unique_preserve_order(lst):
     """
     Deduplicate lst without changing the order. Return a new list.
@@ -41,6 +42,7 @@ def unique_preserve_order(lst):
         if item not in new_lst:
             new_lst.append(item)
     return new_lst
+
 
 def get_browser():
     """
@@ -61,6 +63,7 @@ def get_browser():
         return selenium.webdriver.Chrome(options=options)
     return selenium.webdriver.Chrome()
 
+
 def get_portal_html(browser):
     """
     Given a Selenium browser object, perform a webscrape of Portal.
@@ -72,13 +75,16 @@ def get_portal_html(browser):
     Portal.
     """
     util.log_verbose("Scraping Portal")
-    url = ("https://portal.hmc.edu/ICS/Portal_Homepage.jnz?"
-           "portlet=Course_Schedules&screen=Advanced+Course+Search"
-           "&screenType=next")
+    url = (
+        "https://portal.hmc.edu/ICS/Portal_Homepage.jnz?"
+        "portlet=Course_Schedules&screen=Advanced+Course+Search"
+        "&screenType=next"
+    )
     browser.get(url)
 
     term_dropdown = selenium.webdriver.support.ui.Select(
-        browser.find_element_by_id("pg0_V_ddlTerm"))
+        browser.find_element_by_id("pg0_V_ddlTerm")
+    )
     term_names = [option.text for option in term_dropdown.options]
 
     terms_info = []
@@ -86,13 +92,12 @@ def get_portal_html(browser):
         match = re.match(r"\s*(FA|SP)\s*([0-9]{4})\s*", term_name)
         if match:
             fall_or_spring, year_str = match.groups()
-            terms_info.append(
-                (int(year_str), fall_or_spring == "FA", term_name))
+            terms_info.append((int(year_str), fall_or_spring == "FA", term_name))
 
     if not terms_info:
         raise ScrapeError(
-            "couldn't parse any term names (from: {})"
-            .format(repr(term_names)))
+            "couldn't parse any term names (from: {})".format(repr(term_names))
+        )
 
     term_info = max(terms_info)
     term = term_info[2]
@@ -110,6 +115,7 @@ def get_portal_html(browser):
 
     return browser.page_source, " ".join(term.split())
 
+
 def parse_table_row(row_idx, row):
     """
     Given a Selenium table row and the index, return a dictionary
@@ -119,19 +125,34 @@ def parse_table_row(row_idx, row):
     """
     elements = row.find_all("td")
     try:
-        (_add, course_code, name, seats, status, faculty_and_schedule,
-         num_credits, begin, end) = elements
+        (
+            _add,
+            course_code,
+            name,
+            seats,
+            status,
+            faculty_and_schedule,
+            num_credits,
+            begin,
+            end,
+        ) = elements
     except ValueError:
         raise ScrapeError(
             "could not extract course list table row elements "
-            "from Portal HTML (for row {})".format(row_idx))
+            "from Portal HTML (for row {})".format(row_idx)
+        )
     all_faculty = []
     schedule = []
     for item in faculty_and_schedule.find_all("li"):
-        faculty, meeting = item.text.split(" / ")
-        # This list gets uniquified later.
-        all_faculty.append(faculty)
-        schedule.append(meeting)
+        try:
+            faculty, meeting = item.text.split(" / ")
+            # This list gets uniquified later.
+            all_faculty.append(faculty)
+            schedule.append(meeting)
+        except ValueError:
+            # No "/" separator, assumed to mean only schedule (no
+            # faculty).
+            schedule.append(item.text)
     return {
         "course_code": course_code.text,
         "course_name": name.text,
@@ -143,6 +164,7 @@ def parse_table_row(row_idx, row):
         "begin_date": begin.text,
         "end_date": end.text,
     }
+
 
 def parse_portal_html(html):
     """
@@ -159,13 +181,11 @@ def parse_portal_html(html):
 
     table_body = table.find("tbody")
     if not table_body:
-        raise ScrapeError(
-            "could not find course list table body in Portal HTML")
+        raise ScrapeError("could not find course list table body in Portal HTML")
 
     table_rows = table_body.find_all("tr", recursive=False)
     if not table_rows:
-        raise ScrapeError(
-            "could not extract course list table rows from Portal HTML")
+        raise ScrapeError("could not extract course list table rows from Portal HTML")
 
     raw_courses = []
     for row_idx, row in enumerate(table_rows):
@@ -174,6 +194,7 @@ def parse_portal_html(html):
         raw_courses.append(parse_table_row(row_idx, row))
 
     return raw_courses
+
 
 def format_raw_course(raw_course):
     """
@@ -185,10 +206,14 @@ def format_raw_course(raw_course):
     desc = "{} {}".format(raw_course["course_code"], raw_course["course_name"])
     return re.sub(r"\s+", " ", desc).strip()
 
+
 COURSE_AND_SECTION_REGEX = r"([^-]+)-([0-9]+)"
-SCHEDULE_REGEX = (r"([MTWRFSU]+)\xa0([0-9]+:[0-9]+(?: ?[AP]M)?) ?- ?"
-                  "([0-9]+:[0-9]+ ?[AP]M); ([A-Za-z0-9, ]+)")
+SCHEDULE_REGEX = (
+    r"([MTWRFSU]+)\xa0([0-9]+:[0-9]+(?: ?[AP]M)?) ?- ?"
+    "([0-9]+:[0-9]+ ?[AP]M); ([A-Za-z0-9, ]+)"
+)
 DAYS_OF_WEEK = "MTWRFSU"
+
 
 def process_course(raw_course, term):
     """
@@ -201,8 +226,7 @@ def process_course(raw_course, term):
     course_info = shared.parse_course_code(course_code, with_section=True)
     course_code = shared.course_info_as_string(course_info)
     sort_key = shared.course_info_as_list(course_info, with_section=True)
-    mutual_exclusion_key = shared.course_info_as_list(
-        course_info, with_section=False)
+    mutual_exclusion_key = shared.course_info_as_list(course_info, with_section=False)
     course_name = raw_course["course_name"].strip()
     if not course_name:
         raise ScrapeError("empty string for course name")
@@ -214,40 +238,35 @@ def process_course(raw_course, term):
             raise ScrapeError("faculty with empty name")
     match = re.match(r"([0-9]+)/([0-9]+)", raw_course["seats"])
     if not match:
-        raise ScrapeError(
-            "malformed seat count: {}".format(repr(raw_course["seats"])))
+        raise ScrapeError("malformed seat count: {}".format(repr(raw_course["seats"])))
     filled_seats, total_seats = map(int, match.groups())
     if filled_seats < 0:
-        raise ScrapeError(
-            "negative filled seat count: {}".format(filled_seats))
+        raise ScrapeError("negative filled seat count: {}".format(filled_seats))
     if total_seats < 0:
         raise ScrapeError("negative total seat count: {}".format(total_seats))
     course_status = raw_course["status"].lower()
     if course_status not in ("open", "closed", "reopened"):
-        raise ScrapeError(
-            "unknown course status: {}".format(repr(course_status)))
+        raise ScrapeError("unknown course status: {}".format(repr(course_status)))
     begin_date = dateutil.parser.parse(raw_course["begin_date"]).date()
     end_date = dateutil.parser.parse(raw_course["end_date"]).date()
     # First half-semester courses start (spring) January 1 through
     # January 31 or (fall) July 15 through September 15. (For some
     # reason, MATH 30B in Fall 2017 is listed as starting August 8.)
-    first_half = (datetime.date(begin_date.year, 1, 1)
-                  < begin_date
-                  < datetime.date(begin_date.year, 1, 31)
-                  or datetime.date(begin_date.year, 7, 15)
-                  < begin_date
-                  < datetime.date(begin_date.year, 9, 15))
+    first_half = datetime.date(begin_date.year, 1, 1) < begin_date < datetime.date(
+        begin_date.year, 1, 31
+    ) or datetime.date(begin_date.year, 7, 15) < begin_date < datetime.date(
+        begin_date.year, 9, 15
+    )
     # Second half-semester courses for the spring end May 1 through
     # May 31, but there's also frosh chem pt.II which just *has* to be
     # different by ending 2/3 of the way through the semester. So we
     # also count that by allowing April 1 through April 30. Sigh. Fall
     # courses end December 1 through December 31.
-    second_half = (datetime.date(end_date.year, 4, 1)
-                   < end_date
-                   < datetime.date(end_date.year, 5, 31)
-                   or datetime.date(end_date.year, 12, 1)
-                   < end_date
-                   < datetime.date(end_date.year, 12, 31))
+    second_half = datetime.date(end_date.year, 4, 1) < end_date < datetime.date(
+        end_date.year, 5, 31
+    ) or datetime.date(end_date.year, 12, 1) < end_date < datetime.date(
+        end_date.year, 12, 31
+    )
     if first_half and second_half:
         term_count = 1
         terms = [0]
@@ -258,9 +277,11 @@ def process_course(raw_course, term):
         term_count = 2
         terms = [1]
     else:
-        raise ScrapeError("weird date range {}-{}"
-                          .format(begin_date.strftime("%Y-%m-%d"),
-                                  end_date.strftime("%Y-%m-%d")))
+        raise ScrapeError(
+            "weird date range {}-{}".format(
+                begin_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d")
+            )
+        )
     schedule = []
     for slot in raw_course["schedule"]:
         if re.match(r"To Be Arranged\xa00?0:00 ?- ?0?0:00 ?AM", slot):
@@ -271,10 +292,12 @@ def process_course(raw_course, term):
         days, start, end, location = match.groups()
         for day in days:
             if day not in DAYS_OF_WEEK:
-                raise ScrapeError("unknown day of week {} in schedule slot {}"
-                                  .format(repr(day), repr(slot)))
-        days = "".join(
-            sorted(set(days), key=DAYS_OF_WEEK.index))
+                raise ScrapeError(
+                    "unknown day of week {} in schedule slot {}".format(
+                        repr(day), repr(slot)
+                    )
+                )
+        days = "".join(sorted(set(days), key=DAYS_OF_WEEK.index))
         if not days:
             raise ScrapeError("no days in schedule slot {}".format(repr(slot)))
         if not (start.endswith("AM") or start.endswith("PM")):
@@ -282,50 +305,58 @@ def process_course(raw_course, term):
         try:
             start = dateutil.parser.parse(start).time()
         except ValueError:
-            raise ScrapeError("malformed start time {} in schedule slot {}"
-                              .format(repr(start), repr(slot)))
+            raise ScrapeError(
+                "malformed start time {} in schedule slot {}".format(
+                    repr(start), repr(slot)
+                )
+            )
         try:
             end = dateutil.parser.parse(end).time()
         except ValueError:
-            raise ScrapeError("malformed end time {} in schedule slot {}"
-                              .format(repr(end), repr(slot)))
+            raise ScrapeError(
+                "malformed end time {} in schedule slot {}".format(
+                    repr(end), repr(slot)
+                )
+            )
         location = " ".join(location.strip().split())
         if not location:
             raise ScrapeError("empty string for location")
         # Start using camelCase here because we are constructing
         # objects that will be returned from the API as JSON -- no
         # longer just intermediate objects private to this module.
-        schedule.append({
-            "scheduleDays": days,
-            "scheduleStartTime": start.strftime("%H:%M"),
-            "scheduleEndTime": end.strftime("%H:%M"),
-            "scheduleStartDate": begin_date.strftime("%Y-%m-%d"),
-            "scheduleEndDate": end_date.strftime("%Y-%m-%d"),
-            "scheduleTermCount": term_count,
-            "scheduleTerms": terms,
-            "scheduleLocation": location,
-        })
+        schedule.append(
+            {
+                "scheduleDays": days,
+                "scheduleStartTime": start.strftime("%H:%M"),
+                "scheduleEndTime": end.strftime("%H:%M"),
+                "scheduleStartDate": begin_date.strftime("%Y-%m-%d"),
+                "scheduleEndDate": end_date.strftime("%Y-%m-%d"),
+                "scheduleTermCount": term_count,
+                "scheduleTerms": terms,
+                "scheduleLocation": location,
+            }
+        )
     if not schedule:
-        schedule.append({
-            "scheduleDays": "",
-            "scheduleStartTime": "00:00",
-            "scheduleEndTime": "00:00",
-            "scheduleStartDate": begin_date.strftime("%Y-%m-%d"),
-            "scheduleEndDate": end_date.strftime("%Y-%m-%d"),
-            "scheduleTermCount": term_count,
-            "scheduleTerms": terms,
-            "scheduleLocation": "N/A",
-        })
+        schedule.append(
+            {
+                "scheduleDays": "",
+                "scheduleStartTime": "00:00",
+                "scheduleEndTime": "00:00",
+                "scheduleStartDate": begin_date.strftime("%Y-%m-%d"),
+                "scheduleEndDate": end_date.strftime("%Y-%m-%d"),
+                "scheduleTermCount": term_count,
+                "scheduleTerms": terms,
+                "scheduleLocation": "N/A",
+            }
+        )
     schedule = unique_preserve_order(schedule)
     num_credits = raw_course["credits"]
     try:
         num_credits = float(num_credits)
     except ValueError:
-        raise ScrapeError(
-            "malformed credit count: {}".format(repr(num_credits)))
+        raise ScrapeError("malformed credit count: {}".format(repr(num_credits)))
     if num_credits < 0.0:
-        raise ScrapeError(
-            "negative credit count: {}".format(raw_course["credits"]))
+        raise ScrapeError("negative credit count: {}".format(raw_course["credits"]))
     if "Colloquium" in course_name and num_credits == 0.0:
         num_credits = 0.5
     elif re.match("PE ", course_code) and num_credits == 0.0:
@@ -354,6 +385,7 @@ def process_course(raw_course, term):
         "courseEnrollmentStatus": course_status,
     }
 
+
 def get_courses(desc_index):
     """
     Return a tuple containing the list of course objects and the
@@ -380,40 +412,44 @@ def get_courses(desc_index):
     for raw_course in raw_courses_1:
         try:
             course_code = raw_course["course_code"].strip()
-            course_info = shared.parse_course_code(
-                course_code, with_section=True)
+            course_info = shared.parse_course_code(course_code, with_section=True)
             desc_key = tuple(
-                shared.course_info_as_list(course_info, with_section=False))
+                shared.course_info_as_list(course_info, with_section=False)
+            )
             desc = desc_index.get(desc_key)
             if desc:
                 num_descs_added += 1
             raw_course["course_description"] = desc
-            course_info_map[frozendict.frozendict(course_info)].append(
-                raw_course)
+            course_info_map[frozendict.frozendict(course_info)].append(raw_course)
         except ScrapeError:
             util.log_verbose(
-                "Failed to parse course: {}"
-                .format(repr(format_raw_course(raw_course))))
+                "Failed to parse course: {}".format(repr(format_raw_course(raw_course)))
+            )
             num_failed += 1
             continue
         raw_courses_2.append(raw_course)
     if num_descs_added < 100:
-        raise ScrapeError("not enough course descriptions added: {}"
-                          .format(num_descs_added))
+        raise ScrapeError(
+            "not enough course descriptions added: {}".format(num_descs_added)
+        )
     # Deduplicate course codes.
     raw_courses_3 = []
     for course_info, courses in course_info_map.items():
         if len(courses) > 1:
             if course_info["course_code_suffix"]:
                 util.log_verbose(
-                    "Duplicate course with suffix ({} copies): {}"
-                    .format(len(courses), repr(format_raw_course(courses[0]))))
+                    "Duplicate course with suffix ({} copies): {}".format(
+                        len(courses), repr(format_raw_course(courses[0]))
+                    )
+                )
                 num_failed += len(courses)
                 continue
             if len(courses) > len(string.ascii_uppercase):
                 util.log_verbose(
-                    "Duplicate course with too many copies ({}): {}"
-                    .format(len(courses), repr(format_raw_course(courses[0]))))
+                    "Duplicate course with too many copies ({}): {}".format(
+                        len(courses), repr(format_raw_course(courses[0]))
+                    )
+                )
                 num_failed += len(courses)
                 continue
             for course, letter in zip(courses, string.ascii_uppercase):
@@ -426,14 +462,17 @@ def get_courses(desc_index):
             courses.append(process_course(raw_course, term))
         except ScrapeError:
             util.log_verbose(
-                "Failed to parse course: {}"
-                .format(repr(format_raw_course(raw_course))))
+                "Failed to parse course: {}".format(repr(format_raw_course(raw_course)))
+            )
             num_failed += 1
     if num_failed >= 10:
         raise ScrapeError("Too many malformed courses: {}".format(num_failed))
     num_succeeded = len(raw_courses) - num_failed
     if num_succeeded < 500:
         raise ScrapeError("Not enough courses: {}".format(num_succeeded))
-    util.log_verbose("Added descriptions to {} out of {} courses"
-                     .format(num_descs_added, num_succeeded))
+    util.log_verbose(
+        "Added descriptions to {} out of {} courses".format(
+            num_descs_added, num_succeeded
+        )
+    )
     return courses, term
