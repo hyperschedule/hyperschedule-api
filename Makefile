@@ -57,5 +57,4 @@ help: ## Show this message
 	@grep -h "[#]# " $(MAKEFILE_LIST)	| \
 		sed 's/^/  make /'		| \
 		sed 's/:[^#]*[#]# /|/'		| \
-		sed 's/%/LANG/'			| \
 		column -t -s'|' >&2
