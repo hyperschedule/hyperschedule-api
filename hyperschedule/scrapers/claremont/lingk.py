@@ -40,17 +40,18 @@ from hyperschedule.util import ScrapeError
 LINGK_ENDPOINT = "/v1/harveymudd/coursecatalog/ps/datasets/coursecatalog"
 
 # Full URL to Lingk API endpoint used to get course data.
-LINGK_URL = ("https://www.lingkapis.com{}?limit=1000000000"
-             .format(LINGK_ENDPOINT))
+LINGK_URL = "https://www.lingkapis.com{}?limit=1000000000".format(LINGK_ENDPOINT)
 
 # Full URL to download hacky Lingk CSV file that the registrar gave
 # me.
-LINGK_ZIP_URL = ("https://drive.google.com/uc?export=download&id={}"
-                 .format("1DMHoyIvQthANjqO1DIv78lmWp4b8WDCp"))
+LINGK_ZIP_URL = "https://drive.google.com/uc?export=download&id={}".format(
+    "1DMHoyIvQthANjqO1DIv78lmWp4b8WDCp"
+)
 
 # Number of times to retry getting data from the Lingk API if it
 # returns a spurious authentication error.
 LINGK_RETRY_COUNT = 10
+
 
 def get_auth_header(key, secret, date):
     """
@@ -61,8 +62,10 @@ def get_auth_header(key, secret, date):
     """
     message = "date: {}\n(request-target): get {}".format(date, LINGK_ENDPOINT)
     signature = base64.b64encode(
-        hmac.new(bytes(secret, "ascii"), bytes(message, "ascii"),
-                 digestmod=hashlib.sha1).digest())
+        hmac.new(
+            bytes(secret, "ascii"), bytes(message, "ascii"), digestmod=hashlib.sha1
+        ).digest()
+    )
     attrs = {
         "keyId": key,
         "algorithm": "hmac-sha1",
@@ -70,7 +73,9 @@ def get_auth_header(key, secret, date):
         "signature": urllib.parse.quote(signature),
     }
     return "Signature {}".format(
-        ",".join('{}="{}"'.format(key, val) for key, val in attrs.items()))
+        ",".join('{}="{}"'.format(key, val) for key, val in attrs.items())
+    )
+
 
 def get_lingk_api_data(key, secret):
     """
@@ -88,18 +93,20 @@ def get_lingk_api_data(key, secret):
     for i in range(LINGK_RETRY_COUNT):
         now = datetime.datetime.utcnow()
         date = now.strftime("%a, %d %b %Y %H:%M:%S UTC")
-        response = requests.get(LINGK_URL, headers={
-            "Date": date,
-            "Authorization": get_auth_header(key, secret, date)
-        })
+        response = requests.get(
+            LINGK_URL,
+            headers={"Date": date, "Authorization": get_auth_header(key, secret, date)},
+        )
         try:
             response.raise_for_status()
             return response.json()
         except requests.exceptions.HTTPError as e:
             fails += 1
             util.log_verbose(
-                "Got auth error from Lingk API ({} of {} allowed)"
-                .format(fails, LINGK_RETRY_COUNT))
+                "Got auth error from Lingk API ({} of {} allowed)".format(
+                    fails, LINGK_RETRY_COUNT
+                )
+            )
             time.sleep(1)
             last_error = e
             continue
@@ -107,8 +114,8 @@ def get_lingk_api_data(key, secret):
             raise ScrapeError("Lingk API returned no data")
         except json.decoder.JSONDecodeError:
             raise ScrapeError("Lingk API did not return valid JSON")
-    raise ScrapeError(
-        "Lingk API returned error response: {}".format(last_error))
+    raise ScrapeError("Lingk API returned error response: {}".format(last_error))
+
 
 def lingk_api_data_to_course_descriptions(data):
     """
@@ -128,32 +135,32 @@ def lingk_api_data_to_course_descriptions(data):
             continue
         description = course["description"]
         if not isinstance(description, str):
-            raise ScrapeError(
-                "'description' at index {} is not string".format(idx))
+            raise ScrapeError("'description' at index {} is not string".format(idx))
         if "courseNumber" not in course:
             raise ScrapeError(
-                "Lingk JSON at index {} is missing 'courseNumber' field"
-                .format(idx))
+                "Lingk JSON at index {} is missing 'courseNumber' field".format(idx)
+            )
         course_code = course["courseNumber"]
         # Special case that doesn't show up on Portal.
         if course_code == "ABROAD   HM":
             continue
-        course_info = shared.parse_course_code(
-            course_code, with_section=False)
-        course_key = tuple(shared.course_info_as_list(
-            course_info, with_section=False))
-        found_mismatch = (course_key in desc_index
-                          and desc_index[course_key] != description)
+        course_info = shared.parse_course_code(course_code, with_section=False)
+        course_key = tuple(shared.course_info_as_list(course_info, with_section=False))
+        found_mismatch = (
+            course_key in desc_index and desc_index[course_key] != description
+        )
         if found_mismatch:
-            raise ScrapeError("Lingk JSON has duplicate course: {}".format(
-                repr(course_key)))
+            raise ScrapeError(
+                "Lingk JSON has duplicate course: {}".format(repr(course_key))
+            )
         desc_index[course_key] = description
     return desc_index
+
 
 def get_lingk_csv_data():
     with tempfile.TemporaryDirectory() as tmp_dir:
         tmp_dir = pathlib.Path(tmp_dir)
-        zip_file = tmp_dir / "HMCarchive.zip"
+        zip_file = tmp_dir / "HMCarchive-Spring2020.zip"
         with requests.get(LINGK_ZIP_URL, stream=True) as r:
             with open(zip_file, "wb") as f:
                 shutil.copyfileobj(r.raw, f)
@@ -173,12 +180,16 @@ def get_lingk_csv_data():
     # automatically. Hence the following *absolutely horrifying* hack.
     contents = re.sub(
         r'"([A-Z]{2})","\1","(.*?)"(?=\n[^\n]+"([A-Z]{2})","\3")',
-        (lambda m:
-         '"{}","{}","{}"'.format(
-             m.group(1), m.group(1), re.sub(r'"', '""', m.group(2)))),
+        (
+            lambda m: '"{}","{}","{}"'.format(
+                m.group(1), m.group(1), re.sub(r'"', '""', m.group(2))
+            )
+        ),
         contents,
-        flags=re.DOTALL)
+        flags=re.DOTALL,
+    )
     return list(csv.reader(contents.splitlines()))
+
 
 def lingk_csv_data_to_course_descriptions(data):
     header, *rows = data
@@ -186,8 +197,7 @@ def lingk_csv_data_to_course_descriptions(data):
         course_code_idx = header.index("courseNumber")
         desc_idx = header.index("description")
     except ValueError:
-        raise ScrapeError(
-            "unexpected header: {}".format(repr(header))) from None
+        raise ScrapeError("unexpected header: {}".format(repr(header))) from None
     desc_map = {}
     for row in rows:
         # We have some rows that are completely empty and some that
@@ -198,14 +208,10 @@ def lingk_csv_data_to_course_descriptions(data):
             raise ScrapeError("malformed row: {}".format(repr(row)))
         course_code = row[course_code_idx]
         try:
-            course_info = shared.parse_course_code(
-                course_code, with_section=False
-            )
+            course_info = shared.parse_course_code(course_code, with_section=False)
         except ScrapeError:
             continue
-        index_key = tuple(shared.course_info_as_list(
-            course_info, with_section=False
-        ))
+        index_key = tuple(shared.course_info_as_list(course_info, with_section=False))
         description = row[desc_idx]
         if not description:
             continue
@@ -215,9 +221,10 @@ def lingk_csv_data_to_course_descriptions(data):
         desc_map[index_key] = description
     if len(desc_map) < 100:
         raise ScrapeError(
-            "Not enough course descriptions: {}"
-            .format(len(desc_map))) from None
+            "Not enough course descriptions: {}".format(len(desc_map))
+        ) from None
     return desc_map
+
 
 def get_course_descriptions():
     """
@@ -241,6 +248,5 @@ def get_course_descriptions():
         data = get_lingk_csv_data()
         desc_index = lingk_csv_data_to_course_descriptions(data)
     if len(desc_index) < 100:
-        raise ScrapeError(
-            "Not enough course descriptions: {}".format(len(desc_index)))
+        raise ScrapeError("Not enough course descriptions: {}".format(len(desc_index)))
     return desc_index
