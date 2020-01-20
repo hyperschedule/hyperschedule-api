@@ -12,7 +12,7 @@ and migrate to the new frontend domain.
 
 You may see the service in action by visiting the following URL:
 
-* <https://hyperschedule.herokuapp.com/api/v3/courses>
+* <https://hyperschedule.herokuapp.com/api/v3/courses?school=hmc>
 
 ## API v3
 
