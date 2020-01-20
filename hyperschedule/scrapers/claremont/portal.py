@@ -75,6 +75,9 @@ def get_portal_html(browser):
     Portal.
     """
     util.log_verbose("Scraping Portal")
+
+    browser.set_window_size(1920, 1200)
+
     url = (
         "https://portal.hmc.edu/ICS/Portal_Homepage.jnz?"
         "portlet=Course_Schedules&screen=Advanced+Course+Search"
