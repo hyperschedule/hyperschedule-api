@@ -19,6 +19,7 @@ from hyperschedule.util import ScrapeError
 # `parse_course_code`).
 COURSE_REGEX = r"([A-Z]+) *?([0-9]+) *([A-Z]*[0-9]?) *([A-Z]{2})(?:-([0-9]+))?"
 
+
 def parse_course_code(course_code, with_section):
     """
     Given a course code in the format used by Portal and Lingk, with
@@ -39,25 +40,22 @@ def parse_course_code(course_code, with_section):
     """
     match = re.match(COURSE_REGEX, course_code)
     if not match:
-        raise ScrapeError(
-            "malformed course code: {}".format(repr(course_code)))
+        raise ScrapeError("malformed course code: {}".format(repr(course_code)))
     department, course_number, num_suffix, school, section = match.groups()
     if not department:
         raise ScrapeError("empty string for department")
     if "/" in department:
-        raise ScrapeError("department contains slashes: {}"
-                          .format(repr(department)))
+        raise ScrapeError("department contains slashes: {}".format(repr(department)))
     try:
         course_number = int(course_number)
     except ValueError:
-        raise ScrapeError(
-            "malformed course number: {}".format(repr(course_number)))
+        raise ScrapeError("malformed course number: {}".format(repr(course_number)))
     if course_number <= 0:
-        raise ScrapeError(
-            "non-positive course number: {}".format(course_number))
+        raise ScrapeError("non-positive course number: {}".format(course_number))
     if "/" in num_suffix:
-        raise ScrapeError("course code suffix contains slashes: {}"
-                          .format(repr(num_suffix)))
+        raise ScrapeError(
+            "course code suffix contains slashes: {}".format(repr(num_suffix))
+        )
     if not school:
         raise ScrapeError("empty string for school")
     if "/" in school:
@@ -66,17 +64,14 @@ def parse_course_code(course_code, with_section):
         if with_section:
             raise ScrapeError("section missing")
         else:
-            raise ScrapeError(
-                "section unexpectedly present: {}".format(repr(section)))
+            raise ScrapeError("section unexpectedly present: {}".format(repr(section)))
     if section:
         try:
             section = int(section)
         except ValueError:
-            raise ScrapeError(
-                "malformed section number: {}".format(repr(section)))
+            raise ScrapeError("malformed section number: {}".format(repr(section)))
         if section <= 0:
-            raise ScrapeError(
-                "non-positive section number: {}".format(section))
+            raise ScrapeError("non-positive section number: {}".format(section))
     # If section is None, just leave it as is.
     return {
         "department": department,
@@ -85,6 +80,7 @@ def parse_course_code(course_code, with_section):
         "school": school,
         "section": section,
     }
+
 
 def course_info_as_string(course_info):
     """
@@ -102,6 +98,7 @@ def course_info_as_string(course_info):
         course_info["school"],
         course_info["section"],
     )
+
 
 def course_info_as_list(course_info, with_section):
     """
@@ -123,6 +120,7 @@ def course_info_as_list(course_info, with_section):
         lst.append(course_info["section"])
     return lst
 
+
 def parse_term_code(term):
     """
     Given a term code (e.g. "FA 2018"), return a dictionary with keys:
@@ -140,6 +138,7 @@ def parse_term_code(term):
         "spring": match.group(1) == "SP",
     }
 
+
 def term_info_as_list(term_info):
     """
     Given a dictionary as returned by `parse_term_code`, return a list
@@ -147,10 +146,10 @@ def term_info_as_list(term_info):
     """
     return [term_info["year"], term_info["spring"]]
 
+
 def term_info_as_display_name(term_info):
     """
     Given a dictionary as returned by `parse_term_code`, return a
     string suitable for use as a display name.
     """
-    return "{} {}".format(
-        "Fall" if term_info["fall"] else "Spring", term_info["year"])
+    return "{} {}".format("Fall" if term_info["fall"] else "Spring", term_info["year"])

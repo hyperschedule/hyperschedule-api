@@ -15,6 +15,7 @@ import hyperschedule.util as util
 
 from hyperschedule.util import ScrapeError
 
+
 def kill_google_chrome():
     """
     Kill all currently running Google Chrome processes. This is
@@ -31,9 +32,9 @@ def kill_google_chrome():
         # don't get reaped correctly; see
         # <https://blog.phusion.nl/2015/01/20/docker-and-the-pid-1-zombie-reaping-problem/>.
         if re.match(r"chrome", proc.name(), re.IGNORECASE):
-            util.log("Killing {} process {}"
-                     .format(repr(proc.name()), proc.pid))
+            util.log("Killing {} process {}".format(repr(proc.name()), proc.pid))
             proc.kill()
+
 
 def course_to_key(course):
     """
@@ -41,9 +42,9 @@ def course_to_key(course):
     into the course description dictionary returned by
     `lingk.get_course_descriptions`.
     """
-    course_info = shared.parse_course_code(
-        course["courseCode"], with_section=False)
+    course_info = shared.parse_course_code(course["courseCode"], with_section=False)
     return tuple(shared.course_info_as_list(course_info, with_section=False))
+
 
 def get_course_data(old_courses):
     """
@@ -79,7 +80,5 @@ def get_course_data(old_courses):
                 "termName": term_name,
             },
         },
-        "courses": {
-            course["courseCode"]: course for course in courses
-        }
+        "courses": {course["courseCode"]: course for course in courses},
     }

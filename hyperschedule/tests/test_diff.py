@@ -2,8 +2,8 @@ import unittest
 
 from hyperschedule.worker import apply_diff, compute_diff, merge_diffs
 
-class TestDiff(unittest.TestCase):
 
+class TestDiff(unittest.TestCase):
     def test_abc(self):
         cases = [
             [{"foo": "a"}, {"foo": "b"}, {"foo": "c"}],

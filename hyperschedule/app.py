@@ -21,11 +21,14 @@ def nocache(f):
     """
     Decorator for a Flask view that disables caching.
     """
+
     def new_func(*args, **kwargs):
         resp = flask.make_response(f(*args, **kwargs))
         resp.cache_control.no_cache = True
         return resp
+
     return functools.update_wrapper(new_func, f)
+
 
 class APIError(Exception):
     """
@@ -34,14 +37,13 @@ class APIError(Exception):
 
     pass
 
+
 def api_response(data):
     """
     Return a JSONified API response from the given dictionary.
     """
-    return flask.jsonify({
-        "error": None,
-        **data,
-    })
+    return flask.jsonify({"error": None, **data,})
+
 
 @app.errorhandler(APIError)
 def handle_api_error(error):
@@ -49,9 +51,8 @@ def handle_api_error(error):
     Return a JSONified API error response with the given error
     message.
     """
-    return flask.jsonify({
-        "error": str(error),
-    })
+    return flask.jsonify({"error": str(error),})
+
 
 @app.route("/")
 def view_index():
@@ -59,8 +60,8 @@ def view_index():
     View for the index page redirecting users to
     https://hyperschedule.io.
     """
-    return flask.send_from_directory(
-        hyperschedule.ROOT_DIR, "html/index.html")
+    return flask.send_from_directory(hyperschedule.ROOT_DIR, "html/index.html")
+
 
 @app.route("/api/v3/courses")
 @nocache
@@ -88,6 +89,7 @@ def view_api_v3():
     if diff is Unset:
         raise APIError("data not available yet")
     return api_response({"data": diff, "until": until, "full": full})
+
 
 app.worker = worker.HyperscheduleWorker()
 app.worker.start()

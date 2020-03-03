@@ -13,7 +13,7 @@ import hyperschedule.util as util
 
 if __name__ == "__main__":
     args = sys.argv[1:]
-    cmd, = args
+    (cmd,) = args
     for var, val in util.ENV_DEFAULTS.items():
         env_var = "HYPERSCHEDULE_" + var.upper()
         if not os.environ.get(env_var):

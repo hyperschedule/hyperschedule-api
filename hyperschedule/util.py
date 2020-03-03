@@ -6,6 +6,7 @@ import datetime
 import os
 import sys
 
+
 class UnsetClass:
     """
     Singleton class used to implement `Unset`.
@@ -14,14 +15,17 @@ class UnsetClass:
     def __repr__(self):
         return "<Unset>"
 
+
 Unset = UnsetClass()
 
 del UnsetClass
+
 
 class ScrapeError(Exception):
     """
     Exception indicating something went wrong with webscraping.
     """
+
 
 def format_timestamp():
     """
@@ -29,17 +33,20 @@ def format_timestamp():
     """
     return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+
 def log(message):
     """
     Log a message to stderr with the current timestamp.
     """
     print("[{}] {}".format(format_timestamp(), message), file=sys.stderr)
 
+
 def warn(message):
     """
     Log a warning to stderr with the current timestamp.
     """
     log(message)
+
 
 def die(message):
     """
@@ -48,6 +55,7 @@ def die(message):
     """
     log("fatal: " + message)
     sys.exit(1)
+
 
 # Default values for config vars. Set as cache=yes command-line
 # argument or HYPERSCHEDULE_CACHE=yes environment variable.
@@ -66,12 +74,14 @@ ENV_DEFAULTS = {
     "verbose": "yes",
 }
 
+
 def get_env(var):
     """
     Given the name of a config var, return its value.
     """
     env_var = "HYPERSCHEDULE_" + var.upper()
     return os.environ[env_var]
+
 
 def get_env_boolean(var):
     """
@@ -81,18 +91,22 @@ def get_env_boolean(var):
     """
     env_var = "HYPERSCHEDULE_" + var.upper()
     val = os.environ[env_var]
-    yes = (val in ("1", "on")
-           or any(word.startswith(val.lower())
-                  for word in ("yes", "true", "enabled")))
+    yes = val in ("1", "on") or any(
+        word.startswith(val.lower()) for word in ("yes", "true", "enabled")
+    )
     if yes:
         return True
-    no = (val in ("0", "off")
-          or any(word.startswith(val.lower())
-                 for word in ("no", "false", "disabled")))
+    no = val in ("0", "off") or any(
+        word.startswith(val.lower()) for word in ("no", "false", "disabled")
+    )
     if no:
         return False
-    die("value for boolean config var {} (= {}) is malformed: {}"
-        .format(repr(var), env_var, repr(val)))
+    die(
+        "value for boolean config var {} (= {}) is malformed: {}".format(
+            repr(var), env_var, repr(val)
+        )
+    )
+
 
 def log_verbose(message):
     """

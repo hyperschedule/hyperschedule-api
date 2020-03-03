@@ -40,6 +40,7 @@ WEBHOOK_TIMEOUT = 5
 # is enabled.
 CACHE_FILE = hyperschedule.ROOT_DIR / "out" / "courses.json"
 
+
 def list_startswith(lst, prefix):
     """
     Check whether `lst` starts with the given `prefix` list.
@@ -50,6 +51,7 @@ def list_startswith(lst, prefix):
         if a != b:
             return False
     return True
+
 
 def compute_diff(o1, o2):
     """
@@ -69,6 +71,7 @@ def compute_diff(o1, o2):
     for k in set(o1) - set(o2):
         diff[k] = "$delete"
     return diff
+
 
 def apply_diff(o, d):
     """
@@ -90,6 +93,7 @@ def apply_diff(o, d):
         o[k] = apply_diff(o[k], d[k])
     return o
 
+
 def merge_diffs(d1, d2):
     """
     Merge diffs `d1` and `d2`, returning a new diff which is
@@ -108,6 +112,7 @@ def merge_diffs(d1, d2):
             continue
         diff[k] = merge_diffs(d1[k], d2[k])
     return diff
+
 
 class DiffManager:
     """
@@ -155,8 +160,10 @@ class DiffManager:
             # Push new diff and update old diffs.
             new_diff = compute_diff(current_data, new_data)
             diffs.append((current_age, {}))
-            diffs = [(old_age, merge_diffs(old_diff, new_diff))
-                     for (old_age, old_diff) in diffs]
+            diffs = [
+                (old_age, merge_diffs(old_diff, new_diff))
+                for (old_age, old_diff) in diffs
+            ]
         self.state = new_age, new_data, diffs
 
     def get_current_data(self):
@@ -193,6 +200,7 @@ class DiffManager:
                 return diff, False, current_age
         return current_data, True, current_age
 
+
 class DiffWorker:
     """
     Class abstracting doing a repeated computation in a separate
@@ -224,6 +232,7 @@ class DiffWorker:
                 self.diff_manager.set_current_data(age, data)
             self.timer = threading.Timer(self.repeat_delay, target)
             self.timer.start()
+
         # If we don't set the thread as a daemon then it keeps our
         # Gunicorn workers alive after Gunicorn is killed. Ew!!
         self.thread = threading.Thread(target=target, daemon=True)
@@ -245,6 +254,7 @@ class DiffWorker:
         Call `get_diff_to_present` on the underlying `DiffManager`.
         """
         return self.diff_manager.get_diff_to_present(since)
+
 
 class Webhook:
     """
@@ -276,6 +286,7 @@ class Webhook:
         resp = requests.get(self.url)
         resp.raise_for_status()
 
+
 def try_compute_data(s3, webhook, old_data):
     """
     Try to run the scraper and return course data. If something goes
@@ -299,16 +310,20 @@ def try_compute_data(s3, webhook, old_data):
         util.log("Running scraper")
         process = subprocess.Popen(
             ["python", "-m", "hyperschedule.scrapers.claremont"],
-            stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+        )
         output, _ = process.communicate(
-            input=json.dumps(old_data).encode(), timeout=scraper_timeout)
+            input=json.dumps(old_data).encode(), timeout=scraper_timeout
+        )
         if process.returncode != 0:
             raise ScrapeError("scraper failed")
         try:
             output = output.decode()
         except UnicodeDecodeError as e:
-            raise ScrapeError("scraper emitted malformed output: {}"
-                              .format(e)) from None
+            raise ScrapeError(
+                "scraper emitted malformed output: {}".format(e)
+            ) from None
         if "$delete" in output:
             raise ScrapeError("scraper output contains '$delete'")
         data = json.loads(output)
@@ -319,18 +334,21 @@ def try_compute_data(s3, webhook, old_data):
         if util.get_env_boolean("s3_write"):
             s3_write(s3, data)
     except OSError as e:
-        raise ScrapeError("unexpected error while running scraper: {}"
-                          .format(e)) from None
+        raise ScrapeError(
+            "unexpected error while running scraper: {}".format(e)
+        ) from None
     except subprocess.TimeoutExpired:
         process.kill()
         process.communicate()
-        raise ScrapeError("scraper timed out after {} seconds"
-                          .format(scraper_timeout)) from None
+        raise ScrapeError(
+            "scraper timed out after {} seconds".format(scraper_timeout)
+        ) from None
     except json.decoder.JSONDecodeError:
         raise ScrapeError("scraper did not return valid JSON") from None
     except requests.exceptions.RequestException as e:
         util.warn("failed to reach success webhook: {}".format(e))
     return data
+
 
 def compute_data(s3, webhook, old_data):
     """
@@ -350,6 +368,7 @@ def compute_data(s3, webhook, old_data):
         traceback.print_exc()
         return Unset
 
+
 def cache_file_read():
     """
     Read and return data from the scraper result cache file. If this
@@ -364,6 +383,7 @@ def cache_file_read():
     except json.decoder.JSONDecodeError:
         util.warn("Cache file contained invalid JSON")
     return Unset
+
 
 def cache_file_write(data):
     """
@@ -386,8 +406,10 @@ def cache_file_write(data):
             except OSError:
                 pass
 
+
 S3_BUCKET = "hyperschedule"
 S3_KEY = "courses.json"
+
 
 def s3_read(s3):
     """
@@ -398,11 +420,14 @@ def s3_read(s3):
     try:
         obj = s3.Object(S3_BUCKET, S3_KEY)
         return json.load(obj.get()["Body"])
-    except (botocore.exceptions.BotoCoreError,
-            botocore.exceptions.ClientError,
-            json.JSONDecodeError) as e:
+    except (
+        botocore.exceptions.BotoCoreError,
+        botocore.exceptions.ClientError,
+        json.JSONDecodeError,
+    ) as e:
         util.warn("Failed to read S3: {}".format(e))
         return Unset
+
 
 def s3_write(s3, data):
     """
@@ -412,9 +437,9 @@ def s3_write(s3, data):
     try:
         obj = s3.Object(S3_BUCKET, S3_KEY)
         obj.put(Body=json.dumps(data).encode())
-    except (botocore.exceptions.BotoCoreError,
-            botocore.exceptions.ClientError) as e:
+    except (botocore.exceptions.BotoCoreError, botocore.exceptions.ClientError) as e:
         util.warn("Failed to write S3: {}".format(e))
+
 
 class HyperscheduleWorker(DiffWorker):
     """
@@ -436,9 +461,14 @@ class HyperscheduleWorker(DiffWorker):
         if initial_data is Unset and util.get_env_boolean("s3_read"):
             initial_data = s3_read(s3)
         webhook = Webhook(WEBHOOK_URL, WEBHOOK_TIMEOUT)
-        util.log("Starting worker (on-disk cache {}, S3 {})"
-                 .format("enabled" if cache else "disabled",
-                         "enabled" if s3 is not Unset else "disabled"))
+        util.log(
+            "Starting worker (on-disk cache {}, S3 {})".format(
+                "enabled" if cache else "disabled",
+                "enabled" if s3 is not Unset else "disabled",
+            )
+        )
         super().__init__(
             lambda old_data: compute_data(s3, webhook, old_data),
-            SCRAPER_REPEAT_DELAY, initial_data=initial_data)
+            SCRAPER_REPEAT_DELAY,
+            initial_data=initial_data,
+        )

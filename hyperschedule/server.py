@@ -11,6 +11,7 @@ import sys
 
 import hyperschedule.util as util
 
+
 def exec_cmd(cmd):
     print(" ".join(map(shlex.quote, cmd)))
     try:
@@ -18,11 +19,12 @@ def exec_cmd(cmd):
     except KeyboardInterrupt:
         sys.exit(1)
 
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Hyperschedule backend server")
-    parser.add_argument("config", metavar="key=val", nargs="*",
-                        help="config var settings (see README)")
+    parser = argparse.ArgumentParser(description="Hyperschedule backend server")
+    parser.add_argument(
+        "config", metavar="key=val", nargs="*", help="config var settings (see README)"
+    )
     config_args = parser.parse_args().config
     config = {}
     for config_arg in config_args:
@@ -45,10 +47,6 @@ if __name__ == "__main__":
         os.environ["FLASK_ENV"] = "development"
         os.environ["FLASK_APP"] = app
         os.environ["FLASK_SKIP_DOTENV"] = "1"
-        exec_cmd(["flask", "run",
-                  "--host", host,
-                  "--port", port,
-                  "--no-reload"])
+        exec_cmd(["flask", "run", "--host", host, "--port", port, "--no-reload"])
     else:
-        exec_cmd(["gunicorn", "-w", "1", "-b",
-                  "{}:{}" .format(host, port), app])
+        exec_cmd(["gunicorn", "-w", "1", "-b", "{}:{}".format(host, port), app])

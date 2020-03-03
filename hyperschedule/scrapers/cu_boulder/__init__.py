@@ -60,11 +60,14 @@ def get_current_term():
     srcdbs_info = json.loads(match.group(1))
     srcdb_info = max(srcdbs_info, key=srcdb_info_key)
     term_name = srcdb_info["name"]
-    return srcdb_info["code"], {
-        "termCode": term_name,
-        "termSortKey": srcdb_info_key(srcdb_info),
-        "termName": term_name,
-    }
+    return (
+        srcdb_info["code"],
+        {
+            "termCode": term_name,
+            "termSortKey": srcdb_info_key(srcdb_info),
+            "termName": term_name,
+        },
+    )
 
 
 def api_get_courses(srcdb):
@@ -72,12 +75,7 @@ def api_get_courses(srcdb):
     Return the API response for a search for all CU Boulder courses.
     """
     url = "https://classes.colorado.edu/api/?page=fose&route=search"
-    data = {
-        "other": {
-            "srcdb": srcdb,
-        },
-        "criteria": []
-    }
+    data = {"other": {"srcdb": srcdb,}, "criteria": []}
     resp = requests.post(url, json=data)
     resp.raise_for_status()
     return resp.json()
@@ -138,9 +136,7 @@ def parse_cu_dates(cu_dates):
     a CU course.
     """
     date_regex = r"\d{4}-\d{2}-\d{2}"
-    match = re.fullmatch(
-        r"({date}) through ({date})".format(date=date_regex), cu_dates
-    )
+    match = re.fullmatch(r"({date}) through ({date})".format(date=date_regex), cu_dates)
     return match.groups()
 
 
@@ -186,9 +182,7 @@ def parse_cu_course_status(sections_html, this_crn):
     all_sections field of a CU course.
     """
     text = html_to_text(sections_html)
-    for crn, status in re.findall(
-            r"Nbr:\s*([0-9]+).*?Status:\s*([A-Z][a-z]*)", text
-    ):
+    for crn, status in re.findall(r"Nbr:\s*([0-9]+).*?Status:\s*([A-Z][a-z]*)", text):
         if crn == this_crn:
             return status.lower()
     assert False
@@ -219,16 +213,18 @@ def convert_course(cu_course, term_data):
         days = "MTWRFSU"[int(cu_meeting["meet_day"])]
         start_time = parse_cu_time(cu_meeting["start_time"])
         end_time = parse_cu_time(cu_meeting["end_time"])
-        schedule.append({
-            "scheduleDays": days,
-            "scheduleStartTime": start_time,
-            "scheduleEndTime": end_time,
-            "scheduleStartDate": start_date,
-            "scheduleEndDate": end_date,
-            "scheduleTermCount": 1,
-            "scheduleTerms": [0],
-            "scheduleLocation": location,
-        })
+        schedule.append(
+            {
+                "scheduleDays": days,
+                "scheduleStartTime": start_time,
+                "scheduleEndTime": end_time,
+                "scheduleStartDate": start_date,
+                "scheduleEndDate": end_date,
+                "scheduleTermCount": 1,
+                "scheduleTerms": [0],
+                "scheduleLocation": location,
+            }
+        )
     cu_course_code = cu_course["code"]
     section = cu_course["section"]
     course_code = cu_course_code + " " + section
@@ -239,9 +235,7 @@ def convert_course(cu_course, term_data):
     else:
         instructors = ["TBD"]
     num_credits = str(float(cu_course["hours"] or "0"))
-    seats_total, seats_filled, waitlist_length = (
-        parse_cu_seats(cu_course["seats"])
-    )
+    seats_total, seats_filled, waitlist_length = parse_cu_seats(cu_course["seats"])
     enrollment_status = parse_cu_course_status(cu_course["all_sections"], crn)
     return {
         "courseCode": course_code,
@@ -334,8 +328,7 @@ def main():
     available = get_available_courses(srcdb)
     # Remove already-parsed courses which no longer exist in the
     # database.
-    courses = {crn: course for crn, course in courses.items()
-               if crn in available}
+    courses = {crn: course for crn, course in courses.items() if crn in available}
     crns_left = set(available) - completed
     if not crns_left:
         completed = set()
@@ -352,6 +345,7 @@ def main():
             crns.insert(0, args.start_crn)
         lock = threading.Lock()
         for my_crn in crns:
+
             def task():
                 nonlocal lock
                 # Make a copy of the CRN so that we are not
@@ -359,18 +353,24 @@ def main():
                 # callback (it will have since changed).
                 crn = my_crn
                 code = available[crn]
-                print("Fetching data for (srcdb={}, crn={}, code={})"
-                      .format(repr(srcdb), repr(crn), repr(code)),
-                      file=sys.stderr)
+                print(
+                    "Fetching data for (srcdb={}, crn={}, code={})".format(
+                        repr(srcdb), repr(crn), repr(code)
+                    ),
+                    file=sys.stderr,
+                )
                 try:
                     cu_course = api_get_course(srcdb, crn, code)
                     course = convert_course(cu_course, term_data)
                 except Exception:
                     with lock:
                         print(file=sys.stderr)
-                        print("Error for (srcdb={}, crn={}, code={}):"
-                              .format(repr(srcdb), repr(crn), repr(code)),
-                              file=sys.stderr)
+                        print(
+                            "Error for (srcdb={}, crn={}, code={}):".format(
+                                repr(srcdb), repr(crn), repr(code)
+                            ),
+                            file=sys.stderr,
+                        )
                         traceback.print_exc()
                     if not args.ignore_errors:
                         raise
@@ -386,9 +386,7 @@ def main():
         sys.exit(1)
 
     data = {
-        "terms": {
-            term_data["termCode"]: term_data,
-        },
+        "terms": {term_data["termCode"]: term_data,},
         "courses": courses,
         "completed": sorted(completed, key=lambda crn: available[crn]),
     }
