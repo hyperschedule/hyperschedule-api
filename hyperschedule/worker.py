@@ -256,6 +256,30 @@ class DiffWorker:
         return self.diff_manager.get_diff_to_present(since)
 
 
+def rate_limited(rate_limit):
+    """
+    Decorator to rate-limit a function. This means that if you call
+    the function less than `rate_limit` seconds after the last time
+    you called it, then the new call is simply ignored.
+    """
+
+    def decorate(fn):
+        last_timestamp = Unset
+
+        def decorated(*args, **kwargs):
+            nonlocal last_timestamp
+            timestamp = datetime.datetime.now().timestamp()
+            if last_timestamp is not Unset:
+                if timestamp - last_timestamp < rate_limit:
+                    return
+            last_timestamp = timestamp
+            return fn(*args, **kwargs)
+
+        return decorated
+
+    return decorate
+
+
 class Webhook:
     """
     Class that wraps a webhook by providing rate-limiting
@@ -267,9 +291,15 @@ class Webhook:
         Construct a new `Webhook` which sends a GET to `url` at most once
         every `rate_limit` seconds.
         """
+
         self.url = url
-        self.rate_limit = rate_limit
-        self.timestamp = Unset
+
+        @rate_limited(rate_limit)
+        def get(self):
+            resp = requests.get(self.url)
+            resp.raise_for_status()
+
+        self._get = get
 
     def get(self):
         """
@@ -278,13 +308,7 @@ class Webhook:
         nothing. If the request errors out, raise a subclass of
         `requests.exceptions.RequestException`.
         """
-        if self.timestamp is not Unset:
-            timestamp = datetime.datetime.now().timestamp()
-            if timestamp - self.timestamp < self.rate_limit:
-                return
-            self.timestamp = timestamp
-        resp = requests.get(self.url)
-        resp.raise_for_status()
+        return self._get()
 
 
 def try_compute_data(s3, webhook, old_data):
@@ -409,6 +433,7 @@ def cache_file_write(data):
 
 S3_BUCKET = "hyperschedule"
 S3_KEY = "courses.json"
+S3_RATE_LIMIT = 5 * 60  # seconds
 
 
 def s3_read(s3):
@@ -429,6 +454,7 @@ def s3_read(s3):
         return Unset
 
 
+@rate_limited(S3_RATE_LIMIT)
 def s3_write(s3, data):
     """
     Write provided `data` to S3 bucket. If this fails, log the error.
