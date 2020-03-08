@@ -16,6 +16,7 @@ frozendict = "*"
 flask-cors = "*"
 atomicwrites = "*"
 boto3 = "*"
+firebase-admin = "*"
 
 [dev-packages]
 "flake8" = "*"

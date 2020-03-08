@@ -2,6 +2,7 @@
 Module containing the Hyperschedule backend Flask app.
 """
 
+import os
 import functools
 
 import flask
@@ -12,9 +13,16 @@ import hyperschedule.worker as worker
 
 from hyperschedule.util import Unset
 
+import firebase_admin
+from firebase_admin import auth
+from firebase_admin import credentials
+
 # Hyperschedule Flask app.
 app = flask.Flask("hyperschedule")
 flask_cors.CORS(app)
+
+cred = credentials.Certificate(os.environ.get("FIREBASE_CREDENTIALS_PATH"))
+firebase_admin.initialize_app(cred)
 
 # <http://librelist.com/browser/flask/2011/8/8/add-no-cache-to-response/#952cc027cf22800312168250e59bade4>
 def nocache(f):
