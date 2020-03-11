@@ -1,4 +1,4 @@
-{ pkgs ? import <nixpkgs> {} }:
+{ pkgs ? import <nixos> {} }:
 let
   chromeAlias = pkgs.stdenv.mkDerivation {
     name = "google-chrome";
@@ -13,6 +13,8 @@ pkgs.mkShell {
   buildInputs = 
     [chromeAlias] ++ (with pkgs; [
       chromedriver
+      pipenv
+      which
     ]) ++ (with pkgs.python37Packages; [
       beautifulsoup4
       flask

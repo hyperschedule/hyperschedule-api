@@ -295,7 +295,7 @@ class Webhook:
         self.url = url
 
         @rate_limited(rate_limit)
-        def get(self):
+        def get():
             resp = requests.get(self.url)
             resp.raise_for_status()
 
