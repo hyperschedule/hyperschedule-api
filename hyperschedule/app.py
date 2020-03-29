@@ -10,6 +10,7 @@ import flask_cors
 
 import hyperschedule
 import hyperschedule.worker as worker
+import hyperschedule.auth as auth
 
 from hyperschedule.util import Unset
 
@@ -20,9 +21,6 @@ from firebase_admin import credentials
 # Hyperschedule Flask app.
 app = flask.Flask("hyperschedule")
 flask_cors.CORS(app)
-
-cred = credentials.Certificate(os.environ.get("FIREBASE_CREDENTIALS_PATH"))
-firebase_admin.initialize_app(cred)
 
 # <http://librelist.com/browser/flask/2011/8/8/add-no-cache-to-response/#952cc027cf22800312168250e59bade4>
 def nocache(f):
@@ -98,6 +96,7 @@ def view_api_v3():
         raise APIError("data not available yet")
     return api_response({"data": diff, "until": until, "full": full})
 
+
 @app.route("/upload-syllabus", methods = ['POST'])
 @nocache
 def upload_syllabus():
@@ -106,12 +105,11 @@ def upload_syllabus():
     and a syllabus pdf. It uploads the syllabus to Firebase and return success
     or failure.
     """
-    token = flask.request.json.get("token")
-    if not token:
-        raise APIError("request failed to provide token")
-    user = firebase_admin.auth.verify_id_token(token)
+    auth.verify_token()
+    """
     # TODO: read syllabus to post method
     # TODO: implement syllabus upload to Firebase and its local copy
+    """
     raise NotImplementedError("Upload Syllabus feature not implemented")
 
 
