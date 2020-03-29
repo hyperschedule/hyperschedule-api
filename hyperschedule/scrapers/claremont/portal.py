@@ -132,6 +132,8 @@ def parse_table_row(row_idx, row):
             _add,
             course_code,
             name,
+            _req,
+            _note,
             seats,
             status,
             faculty_and_schedule,
@@ -146,7 +148,7 @@ def parse_table_row(row_idx, row):
         )
     all_faculty = []
     schedule = []
-    for item in faculty_and_schedule.find_all("li"):
+    for item in faculty_and_schedule.find_all("div", "col-12"):
         try:
             faculty, meeting = item.text.split(" / ")
             # This list gets uniquified later.
@@ -178,7 +180,7 @@ def parse_portal_html(html):
     """
     soup = bs4.BeautifulSoup(html, "lxml")
 
-    table = soup.find(id="pg0_V_dgCourses")
+    table = soup.find(id="tableCourses")
     if not table:
         raise ScrapeError("could not find course list table in Portal HTML")
 
@@ -239,15 +241,16 @@ def process_course(raw_course, term):
     for faculty_name in faculty:
         if not faculty_name:
             raise ScrapeError("faculty with empty name")
-    match = re.match(r"([0-9]+)/([0-9]+)", raw_course["seats"])
-    if not match:
-        raise ScrapeError("malformed seat count: {}".format(repr(raw_course["seats"])))
-    filled_seats, total_seats = map(int, match.groups())
+    try:
+        # careful: "∕" (`chr(8725)`) != "/" (`chr(47)`)
+        filled_seats, total_seats = map(int, raw_course["seats"].split("∕"))
+    except ValueError as e:
+        raise ScrapeError(f"malformed seat count: {repr(raw_course['seats'])} ({e})")
     if filled_seats < 0:
-        raise ScrapeError("negative filled seat count: {}".format(filled_seats))
+        raise ScrapeError(f"negative filled seat count: {filled_seats}")
     if total_seats < 0:
         raise ScrapeError("negative total seat count: {}".format(total_seats))
-    course_status = raw_course["status"].lower()
+    course_status = raw_course["status"].lower().strip()
     if course_status not in ("open", "closed", "reopened"):
         raise ScrapeError("unknown course status: {}".format(repr(course_status)))
     begin_date = dateutil.parser.parse(raw_course["begin_date"]).date()
@@ -424,9 +427,11 @@ def get_courses(desc_index):
                 num_descs_added += 1
             raw_course["course_description"] = desc
             course_info_map[frozendict.frozendict(course_info)].append(raw_course)
-        except ScrapeError:
+        except ScrapeError as e:
             util.log_verbose(
-                "Failed to parse course: {}".format(repr(format_raw_course(raw_course)))
+                "Failed to parse course: {} ({})".format(
+                    repr(format_raw_course(raw_course)), e
+                )
             )
             num_failed += 1
             continue
