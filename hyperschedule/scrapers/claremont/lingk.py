@@ -40,13 +40,13 @@ from hyperschedule.util import ScrapeError
 LINGK_ENDPOINT = "/v1/harveymudd/coursecatalog/ps/datasets/coursecatalog"
 
 # Full URL to Lingk API endpoint used to get course data.
-LINGK_URL = "https://www.lingkapis.com{}?limit=1000000000".format(LINGK_ENDPOINT)
+LINGK_URL = f"https://www.lingkapis.com{LINGK_ENDPOINT}?limit=1000000000"
 
 # Full URL to download hacky Lingk CSV file that the registrar gave
 # me.
-LINGK_ZIP_URL = "https://drive.google.com/uc?export=download&id={}".format(
-    "1DMHoyIvQthANjqO1DIv78lmWp4b8WDCp"
-)
+LINGK_ZIP_ID = "1DMHoyIvQthANjqO1DIv78lmWp4b8WDCp"
+LINGK_ZIP_URL = f"https://drive.google.com/uc?export=download&id={LINGK_ZIP_ID}"
+
 
 # Number of times to retry getting data from the Lingk API if it
 # returns a spurious authentication error.
@@ -60,7 +60,7 @@ def get_auth_header(key, secret, date):
     string representing the current timestamp in the appropriate
     format.
     """
-    message = "date: {}\n(request-target): get {}".format(date, LINGK_ENDPOINT)
+    message = f"date: {date}\n(request-target): get {LINGK_ENDPOINT}"
     signature = base64.b64encode(
         hmac.new(
             bytes(secret, "ascii"), bytes(message, "ascii"), digestmod=hashlib.sha1
@@ -73,7 +73,7 @@ def get_auth_header(key, secret, date):
         "signature": urllib.parse.quote(signature),
     }
     return "Signature {}".format(
-        ",".join('{}="{}"'.format(key, val) for key, val in attrs.items())
+        ",".join(f'{key}="{val}"' for key, val in attrs.items())
     )
 
 
@@ -103,9 +103,7 @@ def get_lingk_api_data(key, secret):
         except requests.exceptions.HTTPError as e:
             fails += 1
             util.log_verbose(
-                "Got auth error from Lingk API ({} of {} allowed)".format(
-                    fails, LINGK_RETRY_COUNT
-                )
+                f"Got auth error from Lingk API ({fails} of {LINGK_RETRY_COUNT} allowed)"
             )
             time.sleep(1)
             last_error = e
@@ -114,7 +112,7 @@ def get_lingk_api_data(key, secret):
             raise ScrapeError("Lingk API returned no data")
         except json.decoder.JSONDecodeError:
             raise ScrapeError("Lingk API did not return valid JSON")
-    raise ScrapeError("Lingk API returned error response: {}".format(last_error))
+    raise ScrapeError(f"Lingk API returned error response: {last_error}")
 
 
 def lingk_api_data_to_course_descriptions(data):
@@ -135,10 +133,10 @@ def lingk_api_data_to_course_descriptions(data):
             continue
         description = course["description"]
         if not isinstance(description, str):
-            raise ScrapeError("'description' at index {} is not string".format(idx))
+            raise ScrapeError(f"'description' at index {idx} is not string")
         if "courseNumber" not in course:
             raise ScrapeError(
-                "Lingk JSON at index {} is missing 'courseNumber' field".format(idx)
+                f"Lingk JSON at index {idx} is missing 'courseNumber' field"
             )
         course_code = course["courseNumber"]
         # Special case that doesn't show up on Portal.
@@ -150,9 +148,7 @@ def lingk_api_data_to_course_descriptions(data):
             course_key in desc_index and desc_index[course_key] != description
         )
         if found_mismatch:
-            raise ScrapeError(
-                "Lingk JSON has duplicate course: {}".format(repr(course_key))
-            )
+            raise ScrapeError(f"Lingk JSON has duplicate course: {course_key!r}")
         desc_index[course_key] = description
     return desc_index
 
@@ -197,7 +193,7 @@ def lingk_csv_data_to_course_descriptions(data):
         course_code_idx = header.index("courseNumber")
         desc_idx = header.index("description")
     except ValueError:
-        raise ScrapeError("unexpected header: {}".format(repr(header))) from None
+        raise ScrapeError(f"unexpected header: {header!r}") from None
     desc_map = {}
     for row in rows:
         # We have some rows that are completely empty and some that
@@ -205,7 +201,7 @@ def lingk_csv_data_to_course_descriptions(data):
         if not row or "".join(row).isspace():
             continue
         if len(row) != len(header):
-            raise ScrapeError("malformed row: {}".format(repr(row)))
+            raise ScrapeError(f"malformed row: {row!r}")
         course_code = row[course_code_idx]
         try:
             course_info = shared.parse_course_code(course_code, with_section=False)
@@ -220,9 +216,7 @@ def lingk_csv_data_to_course_descriptions(data):
         # (yep, it happens), pick the one that comes later :/
         desc_map[index_key] = description
     if len(desc_map) < 100:
-        raise ScrapeError(
-            "Not enough course descriptions: {}".format(len(desc_map))
-        ) from None
+        raise ScrapeError(f"Not enough course descriptions: {len(desc_map)}") from None
     return desc_map
 
 
@@ -248,5 +242,5 @@ def get_course_descriptions():
         data = get_lingk_csv_data()
         desc_index = lingk_csv_data_to_course_descriptions(data)
     if len(desc_index) < 100:
-        raise ScrapeError("Not enough course descriptions: {}".format(len(desc_index)))
+        raise ScrapeError(f"Not enough course descriptions: {len(desc_index)}")
     return desc_index

@@ -98,9 +98,7 @@ def get_portal_html(browser):
             terms_info.append((int(year_str), fall_or_spring == "FA", term_name))
 
     if not terms_info:
-        raise ScrapeError(
-            "couldn't parse any term names (from: {})".format(repr(term_names))
-        )
+        raise ScrapeError(f"couldn't parse any term names (from: {term_names!r})")
 
     term_info = max(terms_info)
     term = term_info[2]
@@ -144,7 +142,7 @@ def parse_table_row(row_idx, row):
     except ValueError:
         raise ScrapeError(
             "could not extract course list table row elements "
-            "from Portal HTML (for row {})".format(row_idx)
+            f"from Portal HTML (for row {row_idx})"
         )
     all_faculty = []
     schedule = []
@@ -208,7 +206,7 @@ def format_raw_course(raw_course):
     """
     # Try to put together a reasonable string representation of the
     # course for use in error messages, if it is malformed.
-    desc = "{} {}".format(raw_course["course_code"], raw_course["course_name"])
+    desc = f"{raw_course['course_code']} {raw_course['course_name']}"
     return re.sub(r"\s+", " ", desc).strip()
 
 
@@ -244,15 +242,15 @@ def process_course(raw_course, term):
     try:
         # careful: "∕" (`chr(8725)`) != "/" (`chr(47)`)
         filled_seats, total_seats = map(int, raw_course["seats"].split("∕"))
-    except ValueError as e:
-        raise ScrapeError(f"malformed seat count: {repr(raw_course['seats'])} ({e})")
+    except ValueError as err:
+        raise ScrapeError(f"malformed seat count: {raw_course['seats']!r} ({err})")
     if filled_seats < 0:
         raise ScrapeError(f"negative filled seat count: {filled_seats}")
     if total_seats < 0:
-        raise ScrapeError("negative total seat count: {}".format(total_seats))
+        raise ScrapeError(f"negative total seat count: {total_seats}")
     course_status = raw_course["status"].lower().strip()
     if course_status not in ("open", "closed", "reopened"):
-        raise ScrapeError("unknown course status: {}".format(repr(course_status)))
+        raise ScrapeError(f"unknown course status: {course_status!r}")
     begin_date = dateutil.parser.parse(raw_course["begin_date"]).date()
     end_date = dateutil.parser.parse(raw_course["end_date"]).date()
     # First half-semester courses start (spring) January 1 through
@@ -284,9 +282,8 @@ def process_course(raw_course, term):
         terms = [1]
     else:
         raise ScrapeError(
-            "weird date range {}-{}".format(
-                begin_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d")
-            )
+            f"weird date range "
+            f"{begin.date.strftime('%F')}-{end_date.strftime('%F')}"
         )
     schedule = []
     for slot in raw_course["schedule"]:
@@ -294,36 +291,28 @@ def process_course(raw_course, term):
             continue
         match = re.match(SCHEDULE_REGEX, slot)
         if not match:
-            raise ScrapeError("malformed schedule slot: {}".format(repr(slot)))
+            raise ScrapeError(f"malformed schedule slot: {slot!r}")
         days, start, end, location = match.groups()
         for day in days:
             if day not in DAYS_OF_WEEK:
                 raise ScrapeError(
-                    "unknown day of week {} in schedule slot {}".format(
-                        repr(day), repr(slot)
-                    )
+                    f"unknown day of week {day!r} in schedule slot {slot!r}"
                 )
         days = "".join(sorted(set(days), key=DAYS_OF_WEEK.index))
         if not days:
-            raise ScrapeError("no days in schedule slot {}".format(repr(slot)))
+            raise ScrapeError(f"no days in schedule slot {slot!r}")
         if not (start.endswith("AM") or start.endswith("PM")):
             start += end[-2:]
         try:
             start = dateutil.parser.parse(start).time()
         except ValueError:
             raise ScrapeError(
-                "malformed start time {} in schedule slot {}".format(
-                    repr(start), repr(slot)
-                )
+                f"malformed start time {start!r} in schedule slot {slot!r}"
             )
         try:
             end = dateutil.parser.parse(end).time()
         except ValueError:
-            raise ScrapeError(
-                "malformed end time {} in schedule slot {}".format(
-                    repr(end), repr(slot)
-                )
-            )
+            raise ScrapeError(f"malformed end time {end!r} in schedule slot {slot!r}")
         location = " ".join(location.strip().split())
         if not location:
             raise ScrapeError("empty string for location")
@@ -360,9 +349,9 @@ def process_course(raw_course, term):
     try:
         num_credits = float(num_credits)
     except ValueError:
-        raise ScrapeError("malformed credit count: {}".format(repr(num_credits)))
+        raise ScrapeError(f"malformed credit count: {num_credits!r}")
     if num_credits < 0.0:
-        raise ScrapeError("negative credit count: {}".format(raw_course["credits"]))
+        raise ScrapeError(f"negative credit count: {raw_course['credits']}")
     if "Colloquium" in course_name and num_credits == 0.0:
         num_credits = 0.5
     elif re.match("PE ", course_code) and num_credits == 0.0:
@@ -427,36 +416,30 @@ def get_courses(desc_index):
                 num_descs_added += 1
             raw_course["course_description"] = desc
             course_info_map[frozendict.frozendict(course_info)].append(raw_course)
-        except ScrapeError as e:
+        except ScrapeError as err:
             util.log_verbose(
-                "Failed to parse course: {} ({})".format(
-                    repr(format_raw_course(raw_course)), e
-                )
+                f"Failed to parse course: {format_raw_course(raw_course)!r} ({err})"
             )
             num_failed += 1
             continue
         raw_courses_2.append(raw_course)
     if num_descs_added < 100:
-        raise ScrapeError(
-            "not enough course descriptions added: {}".format(num_descs_added)
-        )
+        raise ScrapeError(f"not enough course descriptions added: {num_descs_added}")
     # Deduplicate course codes.
     raw_courses_3 = []
     for course_info, courses in course_info_map.items():
         if len(courses) > 1:
             if course_info["course_code_suffix"]:
                 util.log_verbose(
-                    "Duplicate course with suffix ({} copies): {}".format(
-                        len(courses), repr(format_raw_course(courses[0]))
-                    )
+                    f"Duplicate course with suffix ({len(courses)} copies): "
+                    f"{format_raw_course(courses[0])!r}"
                 )
                 num_failed += len(courses)
                 continue
             if len(courses) > len(string.ascii_uppercase):
                 util.log_verbose(
-                    "Duplicate course with too many copies ({}): {}".format(
-                        len(courses), repr(format_raw_course(courses[0]))
-                    )
+                    f"Duplicate course with too many copies ({len(courses)}): "
+                    f"{format_raw_course(courses[0])!r}"
                 )
                 num_failed += len(courses)
                 continue
@@ -468,19 +451,17 @@ def get_courses(desc_index):
     for raw_course in raw_courses:
         try:
             courses.append(process_course(raw_course, term))
-        except ScrapeError:
+        except ScrapeError as err:
             util.log_verbose(
-                "Failed to parse course: {}".format(repr(format_raw_course(raw_course)))
+                f"Failed to parse course: {format_raw_course(raw_course)!r} ({err})"
             )
             num_failed += 1
     if num_failed >= 10:
-        raise ScrapeError("Too many malformed courses: {}".format(num_failed))
+        raise ScrapeError(f"Too many malformed courses: {num_failed}")
     num_succeeded = len(raw_courses) - num_failed
     if num_succeeded < 500:
-        raise ScrapeError("Not enough courses: {}".format(num_succeeded))
+        raise ScrapeError(f"Not enough courses: {num_succeeded}")
     util.log_verbose(
-        "Added descriptions to {} out of {} courses".format(
-            num_descs_added, num_succeeded
-        )
+        f"Added descriptions to {num_descs_added} out of {num_succeeded} courses"
     )
     return courses, term

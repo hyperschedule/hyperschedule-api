@@ -40,38 +40,36 @@ def parse_course_code(course_code, with_section):
     """
     match = re.match(COURSE_REGEX, course_code)
     if not match:
-        raise ScrapeError("malformed course code: {}".format(repr(course_code)))
+        raise ScrapeError(f"malformed course code: {course_code!r}")
     department, course_number, num_suffix, school, section = match.groups()
     if not department:
         raise ScrapeError("empty string for department")
     if "/" in department:
-        raise ScrapeError("department contains slashes: {}".format(repr(department)))
+        raise ScrapeError(f"department contains slashes: {department!r}")
     try:
         course_number = int(course_number)
     except ValueError:
-        raise ScrapeError("malformed course number: {}".format(repr(course_number)))
-    if course_number <= 0:
-        raise ScrapeError("non-positive course number: {}".format(course_number))
+        raise ScrapeError(f"malformed course number: {course_number!r}")
+    if course_number < 0:
+        raise ScrapeError(f"non-positive course number: {course_number!r}")
     if "/" in num_suffix:
-        raise ScrapeError(
-            "course code suffix contains slashes: {}".format(repr(num_suffix))
-        )
+        raise ScrapeError(f"course code suffix contains slashes: {num_suffix!r}")
     if not school:
         raise ScrapeError("empty string for school")
     if "/" in school:
-        raise ScrapeError("school contains slashes: {}".format(repr(school)))
+        raise ScrapeError(f"school contains slashes: {school!r}")
     if bool(section) != bool(with_section):
         if with_section:
             raise ScrapeError("section missing")
         else:
-            raise ScrapeError("section unexpectedly present: {}".format(repr(section)))
+            raise ScrapeError(f"section unexpectedly present: {section!r}")
     if section:
         try:
             section = int(section)
         except ValueError:
-            raise ScrapeError("malformed section number: {}".format(repr(section)))
+            raise ScrapeError(f"malformed section number: {section!r}")
         if section <= 0:
-            raise ScrapeError("non-positive section number: {}".format(section))
+            raise ScrapeError(f"non-positive section number: {section}")
     # If section is None, just leave it as is.
     return {
         "department": department,
@@ -91,12 +89,12 @@ def course_info_as_string(course_info):
     Throw ScrapeError if the course code is malformed.
     """
     assert course_info["section"]
-    return "{} {:03d}{} {}-{:02d}".format(
-        course_info["department"],
-        course_info["courseNumber"],
-        course_info["courseCodeSuffix"],
-        course_info["school"],
-        course_info["section"],
+    return (
+        f"{course_info['department']} "
+        f"{course_info['courseNumber']:03d}"
+        f"{course_info['courseCodeSuffix']} "
+        f"{course_info['school']}-"
+        f"{course_info['section']:02d}"
     )
 
 
@@ -131,7 +129,7 @@ def parse_term_code(term):
     """
     match = re.match(r"(FA|SP)\s*(20[0-9]{2})", term)
     if not match:
-        raise ScrapeError("malformed term code: {}".format(repr(term)))
+        raise ScrapeError(f"malformed term code: {term!r}")
     return {
         "year": int(match.group(2)),
         "fall": match.group(1) == "FA",
@@ -152,4 +150,4 @@ def term_info_as_display_name(term_info):
     Given a dictionary as returned by `parse_term_code`, return a
     string suitable for use as a display name.
     """
-    return "{} {}".format("Fall" if term_info["fall"] else "Spring", term_info["year"])
+    return f"{'Fall' if term_info['fall'] else 'Spring'} {term_info['year']}"
