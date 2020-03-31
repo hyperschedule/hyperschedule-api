@@ -107,28 +107,10 @@ def upload_syllabus():
     and a syllabus pdf. It uploads the syllabus to Firebase and return success
     or failure.
     """
-    token = flask.request.json.get("token")
-    if not token:
-        raise APIError("request failed to provide token")
-    user = firebase_admin.auth.verify_id_token(token)
-    # TODO: read syllabus to post method
-    # TODO: implement syllabus upload to Firebase and its local copy
-    raise NotImplementedError("Upload Syllabus feature not implemented")
-
-
-@app.route("/upload-syllabus", methods = ['POST'])
-@nocache
-def upload_syllabus():
-    """
-    A post method to upload course syllabus. The POST method requires a token
-    and a syllabus pdf. It uploads the syllabus to Firebase and return success
-    or failure.
-    """
     auth.verify_token()
-    """
+
     # TODO: read syllabus to post method
     # TODO: implement syllabus upload to Firebase and its local copy
-    """
     raise NotImplementedError("Upload Syllabus feature not implemented")
 
 
