@@ -10,17 +10,20 @@ import flask_cors
 
 import hyperschedule
 import hyperschedule.worker as worker
-import hyperschedule.auth as auth
+import hyperschedule.auth as token_auth
 
 from hyperschedule.util import Unset
 
 import firebase_admin
-from firebase_admin import auth
-from firebase_admin import credentials
+from firebase_admin import auth, credentials, firestore
 
 # Hyperschedule Flask app.
 app = flask.Flask("hyperschedule")
 flask_cors.CORS(app)
+
+# Initialize Firebase app
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"]="FIREBASE_CREDENTIALS_PATH"
+firebase = firebase.FirebaseApplication("hyperschedule-course-info.appspot.com")
 
 cred = credentials.Certificate(os.environ.get("FIREBASE_CREDENTIALS_PATH"))
 firebase_admin.initialize_app(cred)
@@ -107,8 +110,32 @@ def upload_syllabus():
     and a syllabus pdf. It uploads the syllabus to Firebase and return success
     or failure.
     """
-    auth.verify_token()
+    token = flask.request.json.get("token")
+    syllabusData = flask.request.json.get("syllabusDataDictionary")
+    pdf = flask.request.get_data("PDFFile")
 
+    if token_auth.verify_token(token) == True:
+        
+        # Upload syllabus
+        # Incomplete file upload (untested)
+        # TODO: find out how to create bucket for class only once
+        # confirm that the PDF is in right location in storage
+        # Store link to PDF in database
+        # Discuss w/ Santi about currentCourseCode - 
+        client = storage.Client()
+        bucket = client.create_bucket(bucket_name)
+
+        bucket = client.get_bucket('courseSyllabi/' + syllabusData[courseCode]) 
+        # get_bucket needs to exist - how to create bucket just once?
+        
+        fileBlob = bucket.blob("/")
+
+        fileBlob.upload_from_file(pdf) 
+
+        raise NotImplementedError("Unted")
+
+
+    
     # TODO: read syllabus to post method
     # TODO: implement syllabus upload to Firebase and its local copy
     raise NotImplementedError("Upload Syllabus feature not implemented")
