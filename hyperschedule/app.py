@@ -10,23 +10,13 @@ import flask_cors
 
 import hyperschedule
 import hyperschedule.worker as worker
-import hyperschedule.auth as token_auth
+import hyperschedule.database_worker as database_worker
 
 from hyperschedule.util import Unset
-
-import firebase_admin
-from firebase_admin import auth, credentials, firestore
 
 # Hyperschedule Flask app.
 app = flask.Flask("hyperschedule")
 flask_cors.CORS(app)
-
-# Initialize Firebase app
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"]="FIREBASE_CREDENTIALS_PATH"
-firebase = firebase.FirebaseApplication("hyperschedule-course-info.appspot.com")
-
-cred = credentials.Certificate(os.environ.get("FIREBASE_CREDENTIALS_PATH"))
-firebase_admin.initialize_app(cred)
 
 # <http://librelist.com/browser/flask/2011/8/8/add-no-cache-to-response/#952cc027cf22800312168250e59bade4>
 def nocache(f):
@@ -102,7 +92,7 @@ def view_api_v3():
         raise APIError("data not available yet")
     return api_response({"data": diff, "until": until, "full": full})
 
-@app.route("/upload-syllabus", methods = ['POST'])
+@app.route("/upload-syllabus", methods = ['PUT', 'POST'])
 @nocache
 def upload_syllabus():
     """
@@ -110,36 +100,14 @@ def upload_syllabus():
     and a syllabus pdf. It uploads the syllabus to Firebase and return success
     or failure.
     """
-    token = flask.request.json.get("token")
-    syllabusData = flask.request.json.get("syllabusDataDictionary")
-    pdf = flask.request.get_data("PDFFile")
 
-    if token_auth.verify_token(token) == True:
-        
-        # Upload syllabus
-        # Incomplete file upload (untested)
-        # TODO: find out how to create bucket for class only once
-        # confirm that the PDF is in right location in storage
-        # Store link to PDF in database
-        # Discuss w/ Santi about currentCourseCode - 
-        client = storage.Client()
-        bucket = client.create_bucket(bucket_name)
+    token = flask.request.form.get('token')
+    pdf = flask.request.files['pdf']
+    syllabus_info = [flask.request.form.get('courseCode'),flask.request.form.get('syllabusDate')]
 
-        bucket = client.get_bucket('courseSyllabi/' + syllabusData[courseCode]) 
-        # get_bucket needs to exist - how to create bucket just once?
-        
-        fileBlob = bucket.blob("/")
-
-        fileBlob.upload_from_file(pdf) 
-
-        raise NotImplementedError("Unted")
-
-
+    if (pdf):
+        database_worker.process_upload_syllabus(token, syllabus_info, pdf)
     
-    # TODO: read syllabus to post method
-    # TODO: implement syllabus upload to Firebase and its local copy
-    raise NotImplementedError("Upload Syllabus feature not implemented")
-
 
 app.worker = worker.HyperscheduleWorker()
 app.worker.start()
