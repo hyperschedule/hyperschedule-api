@@ -36,7 +36,7 @@ class APIError(Exception):
     """
     Exception that is turned into an error response from the API.
     """
-    
+
     pass
 
 
@@ -92,7 +92,7 @@ def view_api_v3():
         raise APIError("data not available yet")
     return api_response({"data": diff, "until": until, "full": full})
 
-@app.route("/upload-syllabus", methods = ['PUT', 'POST'])
+@app.route("/upload-syllabus", methods = ['PUT', 'POST', 'OPTIONS'])
 @nocache
 def upload_syllabus():
     """
