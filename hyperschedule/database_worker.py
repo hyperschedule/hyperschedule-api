@@ -40,7 +40,7 @@ def upload_to_cloud_storage(token, course_code, syllabus_date, pdf):
 
     # Upload syllabus to Firebase Storage
     storageBucket = storage.bucket('hyperschedule-course-info.appspot.com')
-    fileBlob = storageBucket.blob("/courseSyllabi" + course_code)
+    fileBlob = storageBucket.blob("/courseSyllabi/" + course_code)
     fileBlob.metadata = {"semester": syllabus_date}
     try:
         fileBlob.upload_from_file(pdf, content_type='application/pdf')
