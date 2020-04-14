@@ -36,7 +36,7 @@ class APIError(Exception):
     """
     Exception that is turned into an error response from the API.
     """
-
+    
     pass
 
 
@@ -100,13 +100,21 @@ def upload_syllabus():
     and a syllabus pdf. It uploads the syllabus to Firebase and return success
     or failure.
     """
-
     token = flask.request.form.get('token')
+    if token is None:
+        raise APIError("user token not provided")
+    course_code = flask.request.form.get('courseCode')
+    if course_code is None:
+        raise APIError("course code is not provided")
+    syllabus_date = flask.request.form.get('syllabusDate')
+    if syllabus_date is None:
+        raise APIError("syllabus date is not provided")
     pdf = flask.request.files['pdf']
-    syllabus_info = [flask.request.form.get('courseCode'),flask.request.form.get('syllabusDate')]
+    if pdf is None or pdf.filename is '':
+        raise APIError("pdf file not provided")
 
-    if (pdf):
-        database_worker.process_upload_syllabus(token, syllabus_info, pdf)
+    result = database_worker.upload_to_cloud_storage(token, course_code, syllabus_date, pdf)
+    return api_response({"success": result})
     
 
 app.worker = worker.HyperscheduleWorker()
