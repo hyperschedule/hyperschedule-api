@@ -109,7 +109,7 @@ def upload_syllabus():
     syllabus_date = flask.request.form.get('syllabusDate')
     if syllabus_date is None:
         raise APIError("syllabus date is not provided")
-    pdf = flask.request.files['pdf']
+    pdf = flask.request.files.get('pdf')
     if pdf is None or pdf.filename is '':
         raise APIError("pdf file not provided")
 
