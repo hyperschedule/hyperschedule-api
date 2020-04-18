@@ -110,12 +110,11 @@ def upload_syllabus():
     if syllabus_date is None:
         raise APIError("syllabus date is not provided")
     pdf = flask.request.files.get('pdf')
-    if pdf is None or pdf.filename is '':
+    if pdf is None or pdf.filename == '':
         raise APIError("pdf file not provided")
-
     result = database_worker.upload_to_cloud_storage(token, course_code, syllabus_date, pdf)
     return api_response({"success": result})
-    
+
 
 app.worker = worker.HyperscheduleWorker()
 app.worker.start()
