@@ -4,14 +4,12 @@ and FireBase Admin SDK
 """
 
 import firebase_admin
-from firebase_admin import auth, credentials, firestore, storage, db
+from firebase_admin import credentials, storage
 import os
-import json 
 
 # Initialize firebase
 cred = credentials.Certificate(os.environ.get("FIREBASE_CREDENTIALS_PATH"))
 firebase_admin.initialize_app(cred, {'projectId': 'hyperschedule-course-info'})
-db = firestore.client()
 
 class AuthError(Exception):
     pass
@@ -43,17 +41,38 @@ def upload_to_cloud_storage(token, course_code, syllabus_date, pdf):
     # Upload syllabus to Firebase Storage
     storageBucket = storage.bucket('hyperschedule-course-info.appspot.com')
     fileBlob = storageBucket.blob("courseSyllabi/" + course_code)
-    fileBlob.metadata = {"semester": syllabus_date}
+    fileBlob.metadata = {"semester": syllabus_date, "courseCode": course_code}
     try:
         fileBlob.upload_from_file(pdf, content_type='application/pdf')
         fileBlob.make_public()
         link = fileBlob.public_url
-
-        # Write to json - modify filepath to fit
-        json_file = open("/Users/nat/Desktop/CS121/hyperschedule-scraper/out/syllabi.json", "w")
-        json.dump({course_code: link}, json_file)
-        json_file.close()
+        update_syllabus_links(course_code, link)
     except Exception as e:
         raise StorageError from e
 
     return True
+
+# TODO: move this to its appropriate location
+import hyperschedule.scrapers.claremont as scraper
+# a dictionary from key -> course code
+links = {}
+
+def update_syllabus_links_from_cloud_storage():
+    storageBucket = storage.bucket('hyperschedule-course-info.appspot.com')
+    blobs = list(storageBucket.list_blobs())
+    for blob in blobs:
+        if "courseCode" in blob.metadata:
+            links[blob.metadata["courseCode"]] = blob.public_url
+
+update_syllabus_links_from_cloud_storage()
+
+def update_syllabus_links(course_code, link):
+    # update
+    links[course_code] = link
+    print("links updated:", links)
+
+def merge_links_with_json_data(data):
+    # updates data to include syllabus links
+    for course_code in links:
+        if course_code in data["courses"]:
+            data["courses"][course_code]["syllabus_link"] = links[course_code]
