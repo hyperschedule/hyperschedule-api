@@ -4,7 +4,7 @@ and FireBase Admin SDK
 """
 
 import firebase_admin
-from firebase_admin import credentials, storage
+from firebase_admin import credentials, storage, auth
 import os
 
 # Initialize firebase
@@ -46,7 +46,7 @@ def upload_to_cloud_storage(token, course_code, syllabus_date, pdf):
         fileBlob.upload_from_file(pdf, content_type='application/pdf')
         fileBlob.make_public()
         link = fileBlob.public_url
-        update_syllabus_links(course_code, link)
+        update_syllabus_links(course_code, link, syllabus_date)
     except Exception as e:
         raise StorageError from e
 
@@ -56,6 +56,7 @@ def upload_to_cloud_storage(token, course_code, syllabus_date, pdf):
 import hyperschedule.scrapers.claremont as scraper
 # a dictionary from key -> course code
 links = {}
+semesters = {}
 
 def update_syllabus_links_from_cloud_storage():
     storageBucket = storage.bucket('hyperschedule-course-info.appspot.com')
@@ -63,16 +64,21 @@ def update_syllabus_links_from_cloud_storage():
     for blob in blobs:
         if "courseCode" in blob.metadata:
             links[blob.metadata["courseCode"]] = blob.public_url
+            semesters[blob.metadata["courseCode"]] = blob.metadata["semester"]
 
 update_syllabus_links_from_cloud_storage()
 
-def update_syllabus_links(course_code, link):
+# Update syllabus link for the given course
+def update_syllabus_links(course_code, link):#,semester):
     # update
     links[course_code] = link
+    semesters[course_code] = semester
     print("links updated:", links)
 
+# Add syllabus link to the full json
 def merge_links_with_json_data(data):
     # updates data to include syllabus links
     for course_code in links:
         if course_code in data["courses"]:
             data["courses"][course_code]["syllabus_link"] = links[course_code]
+            data["courses"][course_code]["syllabus_term"] = semesters[course_code]
