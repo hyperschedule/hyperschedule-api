@@ -69,7 +69,7 @@ def update_syllabus_links_from_cloud_storage():
 update_syllabus_links_from_cloud_storage()
 
 # Update syllabus link for the given course
-def update_syllabus_links(course_code, link):#,semester):
+def update_syllabus_links(course_code, link,semester):
     # update
     links[course_code] = link
     semesters[course_code] = semester
