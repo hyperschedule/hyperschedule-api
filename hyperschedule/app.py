@@ -10,7 +10,7 @@ import flask_cors
 
 import hyperschedule
 import hyperschedule.worker as worker
-import hyperschedule.database_worker as database_worker
+import hyperschedule.database as database
 
 from hyperschedule.util import Unset
 
@@ -112,7 +112,11 @@ def upload_syllabus():
     pdf = flask.request.files.get('pdf')
     if pdf is None or pdf.filename == '':
         raise APIError("pdf file not provided")
-    result = database_worker.upload_to_cloud_storage(token, course_code, syllabus_date, pdf)
+    try:
+        result = database.upload_to_cloud_storage(token, course_code, syllabus_date, pdf)
+    except Exception as e:
+        raise APIError from e
+
     return api_response({"success": result})
 
 

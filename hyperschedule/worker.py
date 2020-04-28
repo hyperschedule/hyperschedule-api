@@ -24,6 +24,7 @@ import requests.exceptions
 
 import hyperschedule
 import hyperschedule.util as util
+import hyperschedule.database as database
 
 from hyperschedule.util import ScrapeError, Unset
 
@@ -371,9 +372,7 @@ def try_compute_data(s3, webhook, old_data):
         raise ScrapeError("scraper did not return valid JSON") from None
     except requests.exceptions.RequestException as e:
         util.warn("failed to reach success webhook: {}".format(e))
-    # TODO: Move this to appropriate location
-    import hyperschedule.database_worker as database_worker
-    database_worker.merge_links_with_json_data(data)
+    database.merge_syllabus_links_to_courses(data)
     return data
 
 
