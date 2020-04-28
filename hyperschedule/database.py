@@ -17,7 +17,7 @@ BUCKET_NAME = 'hyperschedule-course-info.appspot.com'
 STORAGE_PATH = "courseSyllabi/"
 
 # dictionary from course code to link
-syllabus_links = {}
+syllabus_info = {}
 
 class AuthError(Exception):
     pass
@@ -44,7 +44,7 @@ def is_5C_user(token):
 
 def upload_to_cloud_storage(token, course_code, syllabus_date, pdf):
     """
-    Upload the syllabus to database and update the link in syllabus_links.
+    Upload the syllabus to database and update the information in syllabus_info.
     """
     if not is_5C_user(token):
         raise AuthError("user is not a 5C student")
@@ -57,12 +57,12 @@ def upload_to_cloud_storage(token, course_code, syllabus_date, pdf):
         fileBlob.upload_from_file(pdf, content_type='application/pdf')
         fileBlob.make_public()
         link = fileBlob.public_url
-        update_syllabus_links(course_code, link)
+        update_syllabus_info(course_code, {"link": link, "semester": syllabus_date})
     except Exception as e:
         raise StorageError from e
     return True
 
-def initialize_syllabus_links_from_cloud_storage():
+def initialize_syllabus_info_from_cloud_storage():
     try:
         storageBucket = storage.bucket(BUCKET_NAME)
         blobs = list(storageBucket.list_blobs())
@@ -70,21 +70,22 @@ def initialize_syllabus_links_from_cloud_storage():
         raise StorageError from e
     for blob in blobs:
         if "courseCode" in blob.metadata:
-            syllabus_links[blob.metadata["courseCode"]] = blob.public_url
+             info = {"link": blob.public_url, "semester": blob.metadata["semester"]}
+             syllabus_info[blob.metadata["courseCode"]] = info
 
-def update_syllabus_links(course_code, link):
+def update_syllabus_info(course_code, info):
     """
-    Update local syllabus link of a course.
+    Update local syllabus information of a course.
     """
-    syllabus_links[course_code] = link
+    syllabus_info[course_code] = info
 
-def merge_syllabus_links_to_courses(data):
+def merge_syllabus_info_to_courses(data):
     """
-    Merge syllabus links to course data. This adds a new key "syllabus_link" to each
+    Merge syllabus information to course data. This adds a new key "syllabus_link" to each
     course in data.
     """
-    for course_code in syllabus_links:
+    for course_code in syllabus_info:
         if course_code in data["courses"]:
-            data["courses"][course_code]["syllabus_link"] = syllabus_links[course_code]
+            data["courses"][course_code]["syllabus"] = syllabus_info[course_code]
 
-initialize_syllabus_links_from_cloud_storage()
+initialize_syllabus_info_from_cloud_storage()

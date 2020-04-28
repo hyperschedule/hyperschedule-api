@@ -372,7 +372,7 @@ def try_compute_data(s3, webhook, old_data):
         raise ScrapeError("scraper did not return valid JSON") from None
     except requests.exceptions.RequestException as e:
         util.warn("failed to reach success webhook: {}".format(e))
-    database.merge_syllabus_links_to_courses(data)
+    database.merge_syllabus_info_to_courses(data)
     return data
 
 
