@@ -29,7 +29,7 @@ import hyperschedule.scrapers.claremont.shared as shared
 import hyperschedule.util as util
 
 from hyperschedule.util import ScrapeError
-
+from ratemyprof import RateMyProfAPI
 
 def unique_preserve_order(lst):
     """
@@ -364,6 +364,13 @@ def process_course(raw_course, term):
         num_credits = 3.0
     num_credits = str(num_credits)
     course_description = raw_course["course_description"]
+    # just urls for now - we could add ratings or would take again percentages later
+    urls = []
+    for prof in faculty:
+        a = RateMyProfAPI(teacher=prof)
+        # scrape the info from RateMyProfessors site
+        a.fetch_info()
+        urls.append(a.get_url())
     return {
         "courseCode": course_code,
         "courseName": course_name,
@@ -371,6 +378,7 @@ def process_course(raw_course, term):
         "courseMutualExclusionKey": mutual_exclusion_key,
         "courseDescription": course_description,
         "courseInstructors": faculty,
+        "courseInstructorRMPpages": urls,
         "courseTerm": term,
         "courseSchedule": schedule,
         "courseCredits": num_credits,
