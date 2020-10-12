@@ -16,6 +16,7 @@ import datetime
 import os
 import re
 import string
+import socket
 
 import bs4
 import dateutil.parser
@@ -63,6 +64,10 @@ def get_browser():
         return selenium.webdriver.Chrome(options=options)
     return selenium.webdriver.Chrome()
 
+def get_ip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("8.8.8.8", 80))
+    return s.getsockname()[0]
 
 def get_portal_html(browser):
     """
@@ -74,6 +79,7 @@ def get_portal_html(browser):
     Raise ScrapeError if something goes wrong with the browser or
     Portal.
     """
+    util.log_verbose(f"Current scraper IP is {get_ip()}")
     util.log_verbose("Scraping Portal")
 
     browser.set_window_size(1920, 1200)
