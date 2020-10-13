@@ -15,6 +15,7 @@ import pathlib
 import subprocess
 import threading
 import traceback
+import itertools
 
 import atomicwrites
 import boto3
@@ -45,53 +46,47 @@ def list_startswith(lst, prefix):
     """
     Check whether `lst` starts with the given `prefix` list.
     """
-    if len(prefix) > len(lst):
-        return False
-    for a, b in zip(lst, prefix):
-        if a != b:
-            return False
-    return True
+    return len(prefix) <= len(lst) and all(a == b for a, b in zip(lst, prefix))
 
 
-def compute_diff(o1, o2):
+def compute_diff(old, new):
     """
-    Compute a diff that, when applied to object `o1`, will give object
-    `o2`. Do not modify `o1` or `o2`.
+    Compute a diff that, when applied to object `old`, will give object
+    `new`. Do not modify `old` or `new`.
     """
-    if not isinstance(o1, dict) or not isinstance(o2, dict):
-        return o2
+    if not isinstance(old, dict) or not isinstance(new, dict):
+        return new
     diff = {}
-    for k in o2:
-        if k not in o1:
-            diff[k] = o2[k]
-            continue
-        if o2[k] != o1[k]:
-            diff[k] = compute_diff(o1[k], o2[k])
-            continue
-    for k in set(o1) - set(o2):
-        diff[k] = "$delete"
+    for key, val in new.items():
+        if key not in old:
+            diff[key] = val
+        elif old[key] != val:
+            diff[key] = compute_diff(old[key], val)
+    for key in old:
+        if key not in new:
+            diff[key] = "$delete"
     return diff
 
 
-def apply_diff(o, d):
+def apply_diff(obj, diff):
     """
-    Apply the diff `d` to object `o`, returning a new object.
+    Apply the diff `diff` to object `obj`, returning a new object.
     """
-    if not isinstance(o, dict) or not isinstance(d, dict):
-        return d
-    o = dict(o)
-    for k, v in d.items():
-        if d[k] == "$delete":
+    if not isinstance(obj, dict) or not isinstance(diff, dict):
+        return diff
+    obj = dict(obj)
+    for key, val in diff.items():
+        if val == "$delete":
             try:
-                o.pop(k)
+                obj.pop(key)
             except KeyError:
                 pass
             continue
-        if k not in o:
-            o[k] = v
+        if key not in obj:
+            obj[key] = val
             continue
-        o[k] = apply_diff(o[k], d[k])
-    return o
+        obj[key] = apply_diff(obj[key], val)
+    return obj
 
 
 def merge_diffs(d1, d2):
@@ -102,15 +97,9 @@ def merge_diffs(d1, d2):
     """
     if not isinstance(d1, dict) or not isinstance(d2, dict):
         return d2
-    diff = {}
-    for k in set([*d1, *d2]):
-        if k not in d1:
-            diff[k] = d2[k]
-            continue
-        if k not in d2:
-            diff[k] = d1[k]
-            continue
-        diff[k] = merge_diffs(d1[k], d2[k])
+    diff = d1.copy()
+    for key, val in d2.items():
+        diff[key] = merge_diffs(diff[key], val) if key in diff else val
     return diff
 
 
