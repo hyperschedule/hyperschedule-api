@@ -112,7 +112,7 @@ def get_portal_html(browser):
 
     title_input = browser.find_element_by_id("pg0_V_txtTitleRestrictor")
     title_input.clear()
-    title_input.send_keys("*")
+    title_input.send_keys("?")
 
     search_button = browser.find_element_by_id("pg0_V_btnSearch")
     search_button.click()
