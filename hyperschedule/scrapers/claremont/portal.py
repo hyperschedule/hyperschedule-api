@@ -133,6 +133,7 @@ def parse_table_row(row_idx, row):
     elements = row.find_all("td")
     try:
         (
+            _tb,
             _add,
             course_code,
             name,
@@ -152,7 +153,7 @@ def parse_table_row(row_idx, row):
         )
     all_faculty = []
     schedule = []
-    for item in faculty_and_schedule.find_all("div", "col-12"):
+    for item in faculty_and_schedule.find_all("li"):
         try:
             faculty, meeting = item.text.split(" / ")
             # This list gets uniquified later.
