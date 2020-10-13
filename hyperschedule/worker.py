@@ -29,7 +29,8 @@ import hyperschedule.util as util
 from hyperschedule.util import ScrapeError, Unset
 
 # Number of seconds to wait between attempts to run the scraper.
-SCRAPER_REPEAT_DELAY = 5
+# hotfix, to "pause" hyperschedule scrape data, by setting the timeout to 100 years :)
+SCRAPER_REPEAT_DELAY = 86400 * 365 * 100 # 5
 
 # URL to GET on scraper success.
 WEBHOOK_URL = "https://nosnch.in/f08b6b7be5"
