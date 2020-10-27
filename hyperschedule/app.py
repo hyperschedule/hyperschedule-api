@@ -2,6 +2,7 @@
 Module containing the Hyperschedule backend Flask app.
 """
 
+import os
 import functools
 
 import flask
@@ -9,6 +10,7 @@ import flask_cors
 
 import hyperschedule
 import hyperschedule.worker as worker
+import hyperschedule.database as database
 
 from hyperschedule.util import Unset
 
@@ -89,6 +91,33 @@ def view_api_v3():
     if diff is Unset:
         raise APIError("data not available yet")
     return api_response({"data": diff, "until": until, "full": full})
+
+@app.route("/upload-syllabus", methods = ['PUT', 'POST', 'OPTIONS'])
+@nocache
+def upload_syllabus():
+    """
+    A post method to upload course syllabus. The POST method requires a token
+    and a syllabus pdf. It uploads the syllabus to Firebase and return success
+    or failure.
+    """
+    token = flask.request.form.get('token')
+    if token is None:
+        raise APIError("user token not provided")
+    course_code = flask.request.form.get('courseCode')
+    if course_code is None:
+        raise APIError("course code is not provided")
+    syllabus_date = flask.request.form.get('syllabusDate')
+    if syllabus_date is None:
+        raise APIError("syllabus date is not provided")
+    pdf = flask.request.files.get('pdf')
+    if pdf is None or pdf.filename == '':
+        raise APIError("pdf file not provided")
+    try:
+        result = database.upload_to_cloud_storage(token, course_code, syllabus_date, pdf)
+    except Exception as e:
+        raise APIError from e
+
+    return api_response({"success": result})
 
 
 app.worker = worker.HyperscheduleWorker()
